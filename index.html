@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>International Trap Tracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #eef3ff, #f8f8f8);
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1150px;
+      margin: auto;
+      background: white;
+      padding: 25px;
+      border-radius: 20px;
+      box-shadow: 0 6px 22px rgba(0,0,0,0.12);
+    }
+
+    h1, h2, h3 {
+      text-align: center;
+    }
+
+    input, select, button {
+      padding: 10px;
+      margin: 6px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+
+    button {
+      cursor: pointer;
+      background: #222;
+      color: white;
+      border: none;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      transform: scale(1.03);
+      background: #444;
+    }
+
+    button:disabled {
+      background: #999;
+      color: #eee;
+      cursor: not-allowed;
+      transform: none;
+      opacity: 0.65;
+    }
+
+    .shooter-row {
+      background: #f1f4ff;
+      padding: 14px;
+      border-radius: 14px;
+      margin: 10px 0;
+      border-left: 6px solid #3568d4;
+    }
+
+    .current-box {
+      background: #eef6ff;
+      padding: 22px;
+      border-radius: 18px;
+      margin-top: 20px;
+      text-align: center;
+      border: 2px solid #d1e4ff;
+    }
+
+    .machine-buttons {
+      margin-top: 8px;
+      margin-bottom: 8px;
+    }
+
+    .machine-buttons button {
+      width: 155px;
+      background: #6b87c7;
+      font-weight: bold;
+    }
+
+    .machine-buttons button.selected {
+      background: #062d91;
+      color: white;
+      transform: scale(1.14);
+      box-shadow: 0 0 0 5px rgba(6,45,145,0.25);
+      border: 3px solid white;
+    }
+
+    .machine-buttons button.locked {
+      background: #999;
+      color: #eee;
+    }
+
+    .result-buttons {
+      margin-top: 4px;
+    }
+
+    .result-buttons button {
+      width: 145px;
+      font-weight: bold;
+    }
+
+    .hit { background: #26834a; }
+    .miss { background: #a83232; }
+    .double { background: #7a42c8; }
+    .back-button { background: #b35b00; }
+    .end-button { background: #111; }
+
+    .reset-button {
+      background: #3568d4;
+      font-size: 18px;
+      padding: 14px 24px;
+    }
+
+    .score-symbol {
+      font-size: 15px;
+      font-weight: bold;
+      line-height: 1;
+      display: block;
+      margin-bottom: 1px;
+    }
+
+    .hit-symbol { color: #26834a; }
+    .miss-symbol { color: #a83232; }
+    .double-symbol { color: #7a42c8; }
+
+    .target-note {
+      font-size: 14px;
+      color: #444;
+      margin-top: 10px;
+    }
+
+    .target-counts {
+      margin-top: 10px;
+      margin-bottom: 4px;
+      font-weight: bold;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 25px;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 9px;
+      text-align: center;
+    }
+
+    th {
+      background: #222;
+      color: white;
+    }
+
+    .hidden { display: none; }
+
+    .log-section {
+      margin-top: 35px;
+      padding: 16px;
+      background: #fafafa;
+      border-radius: 14px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .scorecard-table td {
+      vertical-align: middle;
+    }
+
+    .scoresheet-cell {
+      text-align: center;
+    }
+
+    .shot-group {
+      display: grid;
+      grid-template-columns: repeat(5, 26px);
+      justify-content: center;
+      column-gap: 6px;
+      margin: 4px auto;
+      min-height: 30px;
+    }
+
+    .scorecell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      min-height: 30px;
+    }
+
+    .machine-number {
+      font-size: 15px;
+      font-weight: bold;
+      line-height: 1;
+    }
+
+    .empty-scorecell {
+      width: 26px;
+      min-height: 30px;
+    }
+
+    .final-card {
+      background: #f1f4ff;
+      padding: 18px;
+      border-radius: 16px;
+      margin-top: 18px;
+      border-left: 7px solid #3568d4;
+    }
+
+    .final-symbol-row {
+      display: flex;
+      justify-content: center;
+      gap: 22px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .final-symbol-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-weight: bold;
+    }
+
+    .warning {
+      color: #a83232;
+      font-weight: bold;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+<div class="container">
+<h1>International Trap Score Tracker</h1>
+
+<div id="setup">
+  <h2>Set Up Shooters</h2>
+
+  <label>Number of shooters:</label>
+  <input type="number" id="shooterCount" min="1" max="6" value="3">
+  <button onclick="createShooterInputs()">Create Shooters</button>
+
+  <p class="warning" id="stationWarning"></p>
+
+  <div id="shooterInputs"></div>
+
+  <button onclick="startRound()">Start Round</button>
+</div>
+
+<div id="scoreArea" class="hidden">
+  <h2>Round Tracker</h2>
+
+  <div class="current-box">
+    <h3 id="currentShooterText"></h3>
+    <p id="currentShotText"></p>
+
+    <p class="target-note">
+      Each shooter can only receive 2 right, 1 straight, and 2 left targets from each station.
+    </p>
+
+    <div id="targetCounts" class="target-counts"></div>
+
+    <h3>Select Machine</h3>
+    <div id="machineButtons" class="machine-buttons"></div>
+
+    <div class="result-buttons">
+      <button class="hit" onclick="recordShot('Hit')">/ Hit</button>
+      <button class="miss" onclick="recordShot('Miss')">○ Miss</button>
+      <button class="double" onclick="recordShot('Double')">• Double</button>
+    </div>
+
+    <br>
+
+    <button class="back-button" onclick="undoLastShot()">Back</button>
+    <button class="end-button" onclick="endRound()">End Round</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Shooter</th>
+        <th>Current Station</th>
+        <th>Shots</th>
+        <th>Hits</th>
+        <th>Misses</th>
+        <th>Doubles</th>
+        <th>Score</th>
+      </tr>
+    </thead>
+    <tbody id="scoreTable"></tbody>
+  </table>
+
+  <div id="allLogs"></div>
+</div>
+
+<div id="finalPage" class="hidden">
+  <h2>Final Results</h2>
+  <div id="finalResults"></div>
+  <div id="finalLogs"></div>
+
+  <br>
+
+  <center>
+    <button class="reset-button" onclick="resetApp()">Reset</button>
+  </center>
+</div>
+</div>
+
+<script>
+let shooters = [];
+let originalOrder = [];
+let currentShooterIndex = 0;
+let selectedMachine = null;
+let selectedDirection = null;
+let history = [];
+
+const maxShotsPerShooter = 25;
+
+const stationMachines = {
+  1: [
+    { number: 1, direction: "Right" },
+    { number: 2, direction: "Straight" },
+    { number: 3, direction: "Left" }
+  ],
+  2: [
+    { number: 4, direction: "Right" },
+    { number: 5, direction: "Straight" },
+    { number: 6, direction: "Left" }
+  ],
+  3: [
+    { number: 7, direction: "Right" },
+    { number: 8, direction: "Straight" },
+    { number: 9, direction: "Left" }
+  ],
+  4: [
+    { number: 10, direction: "Right" },
+    { number: 11, direction: "Straight" },
+    { number: 12, direction: "Left" }
+  ],
+  5: [
+    { number: 13, direction: "Right" },
+    { number: 14, direction: "Straight" },
+    { number: 15, direction: "Left" }
+  ]
+};
+
+const directionLimits = {
+  Right: 2,
+  Straight: 1,
+  Left: 2
+};
+
+function createShooterInputs() {
+  const count = Number(document.getElementById("shooterCount").value);
+  const div = document.getElementById("shooterInputs");
+  div.innerHTML = "";
+
+  for (let i = 0; i < count; i++) {
+    let defaultStation = i + 1;
+
+    if (i === 5) {
+      defaultStation = 1;
+    }
+
+    let options = "";
+
+    for (let s = 1; s <= 5; s++) {
+      const selected = s === defaultStation ? "selected" : "";
+      options += `<option value="${s}" ${selected}>Station ${s}</option>`;
+    }
+
+    div.innerHTML += `
+      <div class="shooter-row">
+        <label>Shooter ${i + 1} name:</label>
+        <input type="text" id="name${i}" value="Shooter ${i + 1}">
+
+        <label>Starting station:</label>
+        <select id="station${i}" onchange="checkStations()">
+          ${options}
+        </select>
+      </div>
+    `;
+  }
+
+  checkStations();
+}
+
+function makeCounts() {
+  return {
+    1: { Right: 0, Straight: 0, Left: 0 },
+    2: { Right: 0, Straight: 0, Left: 0 },
+    3: { Right: 0, Straight: 0, Left: 0 },
+    4: { Right: 0, Straight: 0, Left: 0 },
+    5: { Right: 0, Straight: 0, Left: 0 }
+  };
+}
+
+function checkStations() {
+  const count = Number(document.getElementById("shooterCount").value);
+  const stationOwner = {};
+  let duplicateIsInvalid = false;
+
+  for (let i = 0; i < count; i++) {
+    const station = document.getElementById("station" + i).value;
+
+    if (stationOwner[station] !== undefined) {
+      const firstIndex = stationOwner[station];
+      const secondIndex = i;
+
+      const duplicateOnlyUsesShooterSix =
+        count === 6 && (firstIndex === 5 || secondIndex === 5);
+
+      if (!duplicateOnlyUsesShooterSix) {
+        duplicateIsInvalid = true;
+      }
+    } else {
+      stationOwner[station] = i;
+    }
+  }
+
+  document.getElementById("stationWarning").textContent =
+    duplicateIsInvalid ? "Only shooter 6 can share a starting station with another shooter." : "";
+}
+
+function startRound() {
+  const count = Number(document.getElementById("shooterCount").value);
+  shooters = [];
+  history = [];
+  currentShooterIndex = 0;
+
+  const stationOwner = {};
+
+  for (let i = 0; i < count; i++) {
+    const station = Number(document.getElementById("station" + i).value);
+
+    if (stationOwner[station] !== undefined) {
+      const firstIndex = stationOwner[station];
+      const secondIndex = i;
+
+      const duplicateOnlyUsesShooterSix =
+        count === 6 && (firstIndex === 5 || secondIndex === 5);
+
+      if (!duplicateOnlyUsesShooterSix) {
+        alert("Only shooter 6 can share a starting station with another shooter.");
+        return;
+      }
+    } else {
+      stationOwner[station] = i;
+    }
+
+    shooters.push({
+      name: document.getElementById("name" + i).value,
+      startStation: station,
+      station: station,
+      shooterNumber: i + 1,
+      shots: 0,
+      hits: 0,
+      misses: 0,
+      doubles: 0,
+      targetCounts: makeCounts(),
+      log: []
+    });
+  }
+
+  shooters.sort((a, b) => {
+    const aKey = a.shooterNumber === 6 ? 6 : a.startStation;
+    const bKey = b.shooterNumber === 6 ? 6 : b.startStation;
+    return aKey - bKey;
+  });
+
+  originalOrder = shooters;
+
+  document.getElementById("setup").classList.add("hidden");
+  document.getElementById("scoreArea").classList.remove("hidden");
+  document.getElementById("finalPage").classList.add("hidden");
+
+  updateDisplay();
+}
+
+function updateDisplay() {
+  selectedMachine = null;
+  selectedDirection = null;
+
+  if (allDone()) {
+    endRound();
+    return;
+  }
+
+  while (shooters[currentShooterIndex].shots >= 25) {
+    currentShooterIndex++;
+
+    if (currentShooterIndex >= shooters.length) {
+      currentShooterIndex = 0;
+    }
+  }
+
+  const shooter = shooters[currentShooterIndex];
+
+  document.getElementById("currentShooterText").textContent =
+    shooter.name + " on Station " + shooter.station;
+
+  document.getElementById("currentShotText").textContent =
+    "Shot " + (shooter.shots + 1) + " of 25";
+
+  updateCounts(shooter);
+  createMachineButtons(shooter);
+  updateScoreTable();
+  updateLogs();
+}
+
+function createMachineButtons(shooter) {
+  const div = document.getElementById("machineButtons");
+  div.innerHTML = "";
+
+  const station = shooter.station;
+  const counts = shooter.targetCounts[station];
+
+  stationMachines[station].forEach(m => {
+    const button = document.createElement("button");
+    button.textContent = "Machine " + m.number;
+
+    const locked = counts[m.direction] >= directionLimits[m.direction];
+
+    if (locked) {
+      button.disabled = true;
+      button.classList.add("locked");
+    }
+
+    button.onclick = function() {
+      selectedMachine = m.number;
+      selectedDirection = m.direction;
+
+      document.querySelectorAll(".machine-buttons button").forEach(b => {
+        b.classList.remove("selected");
+      });
+
+      button.classList.add("selected");
+    };
+
+    div.appendChild(button);
+  });
+}
+
+function updateCounts(shooter) {
+  const c = shooter.targetCounts[shooter.station];
+
+  document.getElementById("targetCounts").textContent =
+    "Right " + c.Right + "/2   Straight " + c.Straight + "/1   Left " + c.Left + "/2";
+}
+
+function recordShot(result) {
+  const shooter = shooters[currentShooterIndex];
+
+  if (selectedMachine === null) {
+    alert("Please select a machine first.");
+    return;
+  }
+
+  history.push(JSON.stringify(shooters));
+  history.push(currentShooterIndex);
+
+  shooter.shots++;
+
+  if (result === "Hit") shooter.hits++;
+  if (result === "Miss") shooter.misses++;
+  if (result === "Double") shooter.doubles++;
+
+  shooter.targetCounts[shooter.station][selectedDirection]++;
+
+  shooter.log.push({
+    machine: selectedMachine,
+    result: result
+  });
+
+  shooter.station++;
+
+  if (shooter.station > 5) {
+    shooter.station = 1;
+  }
+
+  currentShooterIndex++;
+
+  if (currentShooterIndex >= shooters.length) {
+    currentShooterIndex = 0;
+  }
+
+  updateDisplay();
+}
+
+function undoLastShot() {
+  if (history.length === 0) {
+    alert("There is no shot to undo.");
+    return;
+  }
+
+  currentShooterIndex = history.pop();
+  shooters = JSON.parse(history.pop());
+  originalOrder = shooters;
+
+  updateDisplay();
+}
+
+function allDone() {
+  return shooters.every(s => s.shots >= 25);
+}
+
+function getSymbol(result) {
+  if (result === "Hit") return `<span class="score-symbol hit-symbol">/</span>`;
+  if (result === "Miss") return `<span class="score-symbol miss-symbol">○</span>`;
+  return `<span class="score-symbol double-symbol">•</span>`;
+}
+
+function updateScoreTable() {
+  const tbody = document.getElementById("scoreTable");
+  tbody.innerHTML = "";
+
+  originalOrder.forEach(s => {
+    tbody.innerHTML += `
+      <tr>
+        <td>${s.name}</td>
+        <td>${s.station}</td>
+        <td>${s.shots}/25</td>
+        <td>${s.hits}</td>
+        <td>${s.misses}</td>
+        <td>${s.doubles}</td>
+        <td>${s.hits + s.doubles}</td>
+      </tr>
+    `;
+  });
+}
+
+function makeShotCell(entry) {
+  if (!entry) {
+    return `<span class="empty-scorecell"></span>`;
+  }
+
+  return `
+    <span class="scorecell">
+      ${getSymbol(entry.result)}
+      <span class="machine-number">${entry.machine}</span>
+    </span>
+  `;
+}
+
+function makeScoresheet(title) {
+  let rows = "";
+
+  originalOrder.forEach(s => {
+    let html = "";
+
+    const groupsToShow = Math.ceil(s.log.length / 5);
+
+    for (let group = 0; group < groupsToShow; group++) {
+      html += `<div class="shot-group">`;
+
+      for (let slot = 0; slot < 5; slot++) {
+        const index = group * 5 + slot;
+
+        if (index < s.log.length) {
+          html += makeShotCell(s.log[index]);
+        } else {
+          html += makeShotCell(null);
+        }
+      }
+
+      html += `</div>`;
+    }
+
+    rows += `
+      <tr>
+        <td><strong>${s.name}</strong></td>
+        <td class="scoresheet-cell">${html || "No shots recorded yet"}</td>
+        <td><strong>${s.hits + s.doubles}</strong></td>
+      </tr>
+    `;
+  });
+
+  return `
+    <div class="log-section">
+      <h2>${title}</h2>
+      <table class="scorecard-table">
+        <thead>
+          <tr>
+            <th>Shooter</th>
+            <th>Scoresheet</th>
+            <th>Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function updateLogs() {
+  document.getElementById("allLogs").innerHTML = makeScoresheet("Scoresheet");
+}
+
+function makeFinalSymbolSummary(s) {
+  return `
+    <div class="final-symbol-row">
+      <div class="final-symbol-item">
+        <span class="score-symbol hit-symbol">/</span>
+        <span>Hits: ${s.hits}</span>
+      </div>
+      <div class="final-symbol-item">
+        <span class="score-symbol miss-symbol">○</span>
+        <span>Misses: ${s.misses}</span>
+      </div>
+      <div class="final-symbol-item">
+        <span class="score-symbol double-symbol">•</span>
+        <span>Doubles: ${s.doubles}</span>
+      </div>
+    </div>
+  `;
+}
+
+function endRound() {
+  document.getElementById("scoreArea").classList.add("hidden");
+  document.getElementById("finalPage").classList.remove("hidden");
+
+  let html = "";
+
+  originalOrder.forEach(s => {
+    html += `
+      <div class="final-card">
+        <h3>${s.name}</h3>
+        <p><strong>Starting Station:</strong> ${s.startStation}</p>
+        <p><strong>Shots:</strong> ${s.shots}/25</p>
+        <p><strong>Final Score:</strong> ${s.hits + s.doubles}</p>
+        ${makeFinalSymbolSummary(s)}
+      </div>
+    `;
+  });
+
+  document.getElementById("finalResults").innerHTML = html;
+  document.getElementById("finalLogs").innerHTML = makeScoresheet("Final Scoresheet");
+}
+
+function resetApp() {
+  shooters = [];
+  originalOrder = [];
+  currentShooterIndex = 0;
+  selectedMachine = null;
+  selectedDirection = null;
+  history = [];
+
+  document.getElementById("finalPage").classList.add("hidden");
+  document.getElementById("scoreArea").classList.add("hidden");
+  document.getElementById("setup").classList.remove("hidden");
+
+  createShooterInputs();
+}
+
+createShooterInputs();
+</script>
+</body>
+</html>

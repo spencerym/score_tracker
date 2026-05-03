@@ -2,29 +2,51 @@
 <html>
 <head>
   <title>International Trap Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #eef3ff, #f8f8f8);
-      padding: 20px;
+      background: #eef3ff;
+      margin: 0;
+      padding: 10px;
     }
 
     .container {
-      max-width: 1150px;
+      width: 100%;
+      max-width: 900px;
       margin: auto;
       background: white;
-      padding: 25px;
-      border-radius: 20px;
-      box-shadow: 0 6px 22px rgba(0,0,0,0.12);
+      padding: 14px;
+      border-radius: 16px;
     }
 
-    h1, h2, h3 {
+    h1 {
+      font-size: 22px;
       text-align: center;
+      margin: 8px 0 16px;
+    }
+
+    h2 {
+      font-size: 20px;
+      text-align: center;
+      margin: 12px 0;
+    }
+
+    h3 {
+      font-size: 17px;
+      text-align: center;
+      margin: 8px 0;
     }
 
     input, select, button {
-      padding: 10px;
-      margin: 6px;
+      width: 100%;
+      padding: 12px;
+      margin: 5px 0;
       border-radius: 10px;
       border: 1px solid #ccc;
       font-size: 16px;
@@ -35,119 +57,134 @@
       background: #222;
       color: white;
       border: none;
-      transition: 0.2s;
-    }
-
-    button:hover {
-      transform: scale(1.03);
-      background: #444;
+      font-weight: bold;
+      touch-action: manipulation;
     }
 
     button:disabled {
       background: #999;
       color: #eee;
-      cursor: not-allowed;
-      transform: none;
-      opacity: 0.65;
+      opacity: 0.7;
     }
 
     .shooter-row {
       background: #f1f4ff;
-      padding: 14px;
+      padding: 12px;
       border-radius: 14px;
       margin: 10px 0;
-      border-left: 6px solid #3568d4;
     }
 
     .current-box {
       background: #eef6ff;
-      padding: 22px;
-      border-radius: 18px;
-      margin-top: 20px;
+      padding: 14px;
+      border-radius: 16px;
+      margin-top: 12px;
       text-align: center;
-      border: 2px solid #d1e4ff;
+    }
+
+    .target-note {
+      font-size: 13px;
+      color: #444;
+      margin: 8px 0;
+    }
+
+    .target-counts {
+      font-weight: bold;
+      margin: 8px 0;
+      font-size: 15px;
     }
 
     .machine-buttons {
-      margin-top: 8px;
-      margin-bottom: 8px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin: 8px 0;
     }
 
     .machine-buttons button {
-      width: 155px;
+      margin: 0;
+      min-height: 52px;
       background: #6b87c7;
-      font-weight: bold;
     }
 
     .machine-buttons button.selected {
       background: #062d91;
-      color: white;
-      transform: scale(1.14);
-      box-shadow: 0 0 0 5px rgba(6,45,145,0.25);
-      border: 3px solid white;
+      outline: 4px solid rgba(6, 45, 145, 0.25);
+      transform: scale(1.03);
     }
 
     .machine-buttons button.locked {
       background: #999;
-      color: #eee;
     }
 
     .result-buttons {
-      margin-top: 4px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 8px;
     }
 
     .result-buttons button {
-      width: 145px;
-      font-weight: bold;
+      margin: 0;
+      min-height: 52px;
     }
 
     .hit { background: #26834a; }
     .miss { background: #a83232; }
     .double { background: #7a42c8; }
+
+    .control-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
     .back-button { background: #b35b00; }
     .end-button { background: #111; }
 
     .reset-button {
       background: #3568d4;
       font-size: 18px;
-      padding: 14px 24px;
+      padding: 14px;
+    }
+
+    .message {
+      min-height: 22px;
+      color: #a83232;
+      font-weight: bold;
+      font-size: 14px;
+      text-align: center;
+      margin: 6px 0;
     }
 
     .score-symbol {
-      font-size: 15px;
+      font-size: 14px;
       font-weight: bold;
       line-height: 1;
       display: block;
-      margin-bottom: 1px;
     }
 
     .hit-symbol { color: #26834a; }
     .miss-symbol { color: #a83232; }
     .double-symbol { color: #7a42c8; }
 
-    .target-note {
-      font-size: 14px;
-      color: #444;
-      margin-top: 10px;
-    }
-
-    .target-counts {
-      margin-top: 10px;
-      margin-bottom: 4px;
-      font-weight: bold;
+    .summary-table-wrap,
+    .scoresheet-wrap {
+      width: 100%;
+      overflow-x: auto;
+      margin-top: 12px;
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 25px;
-      border-radius: 12px;
-      overflow: hidden;
+      font-size: 14px;
     }
 
     th, td {
       border: 1px solid #ddd;
-      padding: 9px;
+      padding: 7px;
       text-align: center;
     }
 
@@ -156,31 +193,29 @@
       color: white;
     }
 
-    .hidden { display: none; }
-
-    .log-section {
-      margin-top: 35px;
-      padding: 16px;
-      background: #fafafa;
-      border-radius: 14px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    .hidden {
+      display: none;
     }
 
-    .scorecard-table td {
-      vertical-align: middle;
+    .log-section {
+      margin-top: 18px;
+      padding: 10px;
+      background: #fafafa;
+      border-radius: 14px;
     }
 
     .scoresheet-cell {
       text-align: center;
+      min-width: 185px;
     }
 
     .shot-group {
       display: grid;
-      grid-template-columns: repeat(5, 26px);
+      grid-template-columns: repeat(5, 24px);
       justify-content: center;
-      column-gap: 6px;
-      margin: 4px auto;
-      min-height: 30px;
+      gap: 4px;
+      margin: 3px auto;
+      min-height: 28px;
     }
 
     .scorecell {
@@ -188,127 +223,153 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      width: 26px;
-      min-height: 30px;
+      width: 24px;
+      min-height: 28px;
     }
 
     .machine-number {
-      font-size: 15px;
+      font-size: 14px;
       font-weight: bold;
       line-height: 1;
     }
 
     .empty-scorecell {
-      width: 26px;
-      min-height: 30px;
+      width: 24px;
+      min-height: 28px;
     }
 
     .final-card {
       background: #f1f4ff;
-      padding: 18px;
-      border-radius: 16px;
-      margin-top: 18px;
-      border-left: 7px solid #3568d4;
+      padding: 12px;
+      border-radius: 14px;
+      margin-top: 10px;
     }
 
     .final-symbol-row {
-      display: flex;
-      justify-content: center;
-      gap: 22px;
-      margin-top: 12px;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 10px;
     }
 
     .final-symbol-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      font-weight: bold;
-    }
-
-    .warning {
-      color: #a83232;
       font-weight: bold;
       text-align: center;
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 6px;
+      }
+
+      .container {
+        padding: 10px;
+        border-radius: 12px;
+      }
+
+      h1 {
+        font-size: 20px;
+      }
+
+      h2 {
+        font-size: 18px;
+      }
+
+      input, select, button {
+        font-size: 15px;
+        padding: 11px;
+      }
+
+      .machine-buttons,
+      .result-buttons {
+        gap: 6px;
+      }
+
+      .machine-buttons button,
+      .result-buttons button {
+        font-size: 14px;
+        min-height: 48px;
+      }
+
+      th, td {
+        padding: 6px;
+        font-size: 13px;
+      }
     }
   </style>
 </head>
 
 <body>
 <div class="container">
-<h1>International Trap Score Tracker</h1>
+  <h1>International Trap Score Tracker</h1>
 
-<div id="setup">
-  <h2>Set Up Shooters</h2>
+  <div id="setup">
+    <h2>Set Up Shooters</h2>
 
-  <label>Number of shooters:</label>
-  <input type="number" id="shooterCount" min="1" max="6" value="3">
-  <button onclick="createShooterInputs()">Create Shooters</button>
+    <label>Number of shooters:</label>
+    <input type="number" id="shooterCount" min="1" max="6" value="3">
+    <button onclick="createShooterInputs()">Create Shooters</button>
 
-  <p class="warning" id="stationWarning"></p>
+    <p class="message" id="stationWarning"></p>
 
-  <div id="shooterInputs"></div>
+    <div id="shooterInputs"></div>
 
-  <button onclick="startRound()">Start Round</button>
-</div>
-
-<div id="scoreArea" class="hidden">
-  <h2>Round Tracker</h2>
-
-  <div class="current-box">
-    <h3 id="currentShooterText"></h3>
-    <p id="currentShotText"></p>
-
-    <p class="target-note">
-      Each shooter can only receive 2 right, 1 straight, and 2 left targets from each station.
-    </p>
-
-    <div id="targetCounts" class="target-counts"></div>
-
-    <h3>Select Machine</h3>
-    <div id="machineButtons" class="machine-buttons"></div>
-
-    <div class="result-buttons">
-      <button class="hit" onclick="recordShot('Hit')">/ Hit</button>
-      <button class="miss" onclick="recordShot('Miss')">○ Miss</button>
-      <button class="double" onclick="recordShot('Double')">• Double</button>
-    </div>
-
-    <br>
-
-    <button class="back-button" onclick="undoLastShot()">Back</button>
-    <button class="end-button" onclick="endRound()">End Round</button>
+    <button onclick="startRound()">Start Round</button>
   </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Shooter</th>
-        <th>Current Station</th>
-        <th>Shots</th>
-        <th>Hits</th>
-        <th>Misses</th>
-        <th>Doubles</th>
-        <th>Score</th>
-      </tr>
-    </thead>
-    <tbody id="scoreTable"></tbody>
-  </table>
+  <div id="scoreArea" class="hidden">
+    <h2>Round Tracker</h2>
 
-  <div id="allLogs"></div>
-</div>
+    <div class="current-box">
+      <h3 id="currentShooterText"></h3>
+      <p id="currentShotText"></p>
 
-<div id="finalPage" class="hidden">
-  <h2>Final Results</h2>
-  <div id="finalResults"></div>
-  <div id="finalLogs"></div>
+      <p class="target-note">
+        Each shooter can receive 2 right, 1 straight, and 2 left targets from each station.
+      </p>
 
-  <br>
+      <div id="targetCounts" class="target-counts"></div>
 
-  <center>
+      <div id="machineButtons" class="machine-buttons"></div>
+
+      <div class="result-buttons">
+        <button class="hit" onclick="recordShot('Hit')">/ Hit</button>
+        <button class="miss" onclick="recordShot('Miss')">○ Miss</button>
+        <button class="double" onclick="recordShot('Double')">• Double</button>
+      </div>
+
+      <p class="message" id="actionMessage"></p>
+
+      <div class="control-buttons">
+        <button class="back-button" onclick="undoLastShot()">Back</button>
+        <button class="end-button" onclick="endRound()">End Round</button>
+      </div>
+    </div>
+
+    <div class="summary-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Shooter</th>
+            <th>Station</th>
+            <th>Shots</th>
+            <th>Score</th>
+          </tr>
+        </thead>
+        <tbody id="scoreTable"></tbody>
+      </table>
+    </div>
+
+    <div id="allLogs"></div>
+  </div>
+
+  <div id="finalPage" class="hidden">
+    <h2>Final Results</h2>
+    <div id="finalResults"></div>
+    <div id="finalLogs"></div>
+
     <button class="reset-button" onclick="resetApp()">Reset</button>
-  </center>
-</div>
+  </div>
 </div>
 
 <script>
@@ -318,8 +379,6 @@ let currentShooterIndex = 0;
 let selectedMachine = null;
 let selectedDirection = null;
 let history = [];
-
-const maxShotsPerShooter = 25;
 
 const stationMachines = {
   1: [
@@ -355,6 +414,10 @@ const directionLimits = {
   Left: 2
 };
 
+function setMessage(text) {
+  document.getElementById("actionMessage").textContent = text || "";
+}
+
 function createShooterInputs() {
   const count = Number(document.getElementById("shooterCount").value);
   const div = document.getElementById("shooterInputs");
@@ -374,7 +437,7 @@ function createShooterInputs() {
       options += `<option value="${s}" ${selected}>Station ${s}</option>`;
     }
 
-    div.innerHTML += `
+    div.insertAdjacentHTML("beforeend", `
       <div class="shooter-row">
         <label>Shooter ${i + 1} name:</label>
         <input type="text" id="name${i}" value="Shooter ${i + 1}">
@@ -384,7 +447,7 @@ function createShooterInputs() {
           ${options}
         </select>
       </div>
-    `;
+    `);
   }
 
   checkStations();
@@ -403,20 +466,18 @@ function makeCounts() {
 function checkStations() {
   const count = Number(document.getElementById("shooterCount").value);
   const stationOwner = {};
-  let duplicateIsInvalid = false;
+  let invalid = false;
 
   for (let i = 0; i < count; i++) {
     const station = document.getElementById("station" + i).value;
 
     if (stationOwner[station] !== undefined) {
-      const firstIndex = stationOwner[station];
-      const secondIndex = i;
+      const first = stationOwner[station];
+      const second = i;
+      const allowed = count === 6 && (first === 5 || second === 5);
 
-      const duplicateOnlyUsesShooterSix =
-        count === 6 && (firstIndex === 5 || secondIndex === 5);
-
-      if (!duplicateOnlyUsesShooterSix) {
-        duplicateIsInvalid = true;
+      if (!allowed) {
+        invalid = true;
       }
     } else {
       stationOwner[station] = i;
@@ -424,29 +485,28 @@ function checkStations() {
   }
 
   document.getElementById("stationWarning").textContent =
-    duplicateIsInvalid ? "Only shooter 6 can share a starting station with another shooter." : "";
+    invalid ? "Only shooter 6 can share a starting station." : "";
 }
 
 function startRound() {
   const count = Number(document.getElementById("shooterCount").value);
+  const stationOwner = {};
+
   shooters = [];
   history = [];
   currentShooterIndex = 0;
-
-  const stationOwner = {};
 
   for (let i = 0; i < count; i++) {
     const station = Number(document.getElementById("station" + i).value);
 
     if (stationOwner[station] !== undefined) {
-      const firstIndex = stationOwner[station];
-      const secondIndex = i;
+      const first = stationOwner[station];
+      const second = i;
+      const allowed = count === 6 && (first === 5 || second === 5);
 
-      const duplicateOnlyUsesShooterSix =
-        count === 6 && (firstIndex === 5 || secondIndex === 5);
-
-      if (!duplicateOnlyUsesShooterSix) {
-        alert("Only shooter 6 can share a starting station with another shooter.");
+      if (!allowed) {
+        document.getElementById("stationWarning").textContent =
+          "Only shooter 6 can share a starting station.";
         return;
       }
     } else {
@@ -485,8 +545,9 @@ function startRound() {
 function updateDisplay() {
   selectedMachine = null;
   selectedDirection = null;
+  setMessage("");
 
-  if (allDone()) {
+  if (shooters.every(s => s.shots >= 25)) {
     endRound();
     return;
   }
@@ -534,6 +595,7 @@ function createMachineButtons(shooter) {
     button.onclick = function() {
       selectedMachine = m.number;
       selectedDirection = m.direction;
+      setMessage("");
 
       document.querySelectorAll(".machine-buttons button").forEach(b => {
         b.classList.remove("selected");
@@ -557,12 +619,14 @@ function recordShot(result) {
   const shooter = shooters[currentShooterIndex];
 
   if (selectedMachine === null) {
-    alert("Please select a machine first.");
+    setMessage("Select a machine first.");
     return;
   }
 
-  history.push(JSON.stringify(shooters));
-  history.push(currentShooterIndex);
+  history.push({
+    shooters: JSON.stringify(shooters),
+    currentShooterIndex: currentShooterIndex
+  });
 
   shooter.shots++;
 
@@ -594,19 +658,17 @@ function recordShot(result) {
 
 function undoLastShot() {
   if (history.length === 0) {
-    alert("There is no shot to undo.");
+    setMessage("No shot to undo.");
     return;
   }
 
-  currentShooterIndex = history.pop();
-  shooters = JSON.parse(history.pop());
+  const last = history.pop();
+
+  shooters = JSON.parse(last.shooters);
   originalOrder = shooters;
+  currentShooterIndex = last.currentShooterIndex;
 
   updateDisplay();
-}
-
-function allDone() {
-  return shooters.every(s => s.shots >= 25);
 }
 
 function getSymbol(result) {
@@ -620,17 +682,14 @@ function updateScoreTable() {
   tbody.innerHTML = "";
 
   originalOrder.forEach(s => {
-    tbody.innerHTML += `
+    tbody.insertAdjacentHTML("beforeend", `
       <tr>
         <td>${s.name}</td>
         <td>${s.station}</td>
         <td>${s.shots}/25</td>
-        <td>${s.hits}</td>
-        <td>${s.misses}</td>
-        <td>${s.doubles}</td>
         <td>${s.hits + s.doubles}</td>
       </tr>
-    `;
+    `);
   });
 }
 
@@ -652,7 +711,6 @@ function makeScoresheet(title) {
 
   originalOrder.forEach(s => {
     let html = "";
-
     const groupsToShow = Math.ceil(s.log.length / 5);
 
     for (let group = 0; group < groupsToShow; group++) {
@@ -660,12 +718,7 @@ function makeScoresheet(title) {
 
       for (let slot = 0; slot < 5; slot++) {
         const index = group * 5 + slot;
-
-        if (index < s.log.length) {
-          html += makeShotCell(s.log[index]);
-        } else {
-          html += makeShotCell(null);
-        }
+        html += makeShotCell(index < s.log.length ? s.log[index] : null);
       }
 
       html += `</div>`;
@@ -674,7 +727,7 @@ function makeScoresheet(title) {
     rows += `
       <tr>
         <td><strong>${s.name}</strong></td>
-        <td class="scoresheet-cell">${html || "No shots recorded yet"}</td>
+        <td class="scoresheet-cell">${html || "No shots yet"}</td>
         <td><strong>${s.hits + s.doubles}</strong></td>
       </tr>
     `;
@@ -683,18 +736,20 @@ function makeScoresheet(title) {
   return `
     <div class="log-section">
       <h2>${title}</h2>
-      <table class="scorecard-table">
-        <thead>
-          <tr>
-            <th>Shooter</th>
-            <th>Scoresheet</th>
-            <th>Score</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows}
-        </tbody>
-      </table>
+      <div class="scoresheet-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Shooter</th>
+              <th>Scoresheet</th>
+              <th>Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows}
+          </tbody>
+        </table>
+      </div>
     </div>
   `;
 }
@@ -708,15 +763,15 @@ function makeFinalSymbolSummary(s) {
     <div class="final-symbol-row">
       <div class="final-symbol-item">
         <span class="score-symbol hit-symbol">/</span>
-        <span>Hits: ${s.hits}</span>
+        Hits: ${s.hits}
       </div>
       <div class="final-symbol-item">
         <span class="score-symbol miss-symbol">○</span>
-        <span>Misses: ${s.misses}</span>
+        Misses: ${s.misses}
       </div>
       <div class="final-symbol-item">
         <span class="score-symbol double-symbol">•</span>
-        <span>Doubles: ${s.doubles}</span>
+        Doubles: ${s.doubles}
       </div>
     </div>
   `;

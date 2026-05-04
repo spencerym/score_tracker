@@ -4,6 +4,9 @@
   <title>International Trap Tracker</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
   <style>
     * { box-sizing: border-box; }
 
@@ -119,7 +122,9 @@
       transform: scale(1.03);
     }
 
-    .machine-column button.locked { background: #999; }
+    .machine-column button.locked {
+      background: #999;
+    }
 
     .result-buttons {
       display: grid;
@@ -147,6 +152,16 @@
     .back-button { background: #b35b00; }
     .end-button { background: #111; }
 
+    .export-buttons {
+      margin: 18px 0 28px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .export-image { background: #26834a; }
+    .export-pdf { background: #7a42c8; }
+
     .reset-button {
       background: #3568d4;
       font-size: 18px;
@@ -167,6 +182,10 @@
       font-weight: bold;
       line-height: 1;
       display: block;
+    }
+
+    .double-symbol {
+      font-size: 18px;
     }
 
     .hit-symbol { color: #26834a; }
@@ -273,8 +292,20 @@
       margin: 5px 0;
     }
 
+    .analysis-divider {
+      border: none;
+      border-top: 1px solid #ccc;
+      margin: 10px 0;
+    }
+
+    .analysis-section-space {
+      height: 6px;
+    }
+
     @media (max-width: 480px) {
-      body { padding: 6px; }
+      body {
+        padding: 6px;
+      }
 
       .container {
         padding: 10px;
@@ -290,7 +321,8 @@
       }
 
       .machine-area,
-      .result-buttons {
+      .result-buttons,
+      .export-buttons {
         gap: 6px;
       }
 
@@ -305,7 +337,9 @@
         font-size: 13px;
       }
 
-      .scoresheet-cell { min-width: 165px; }
+      .scoresheet-cell {
+        min-width: 165px;
+      }
     }
   </style>
 </head>
@@ -376,7 +410,14 @@
     <h2>Final Scoresheet</h2>
     <div id="finalLogs"></div>
 
-    <h2>Final Results and Analysis</h2>
+    <div class="export-buttons">
+      <button class="export-image" onclick="exportScoresheetImage()">Export Image</button>
+      <button class="export-pdf" onclick="exportScoresheetPDF()">Export PDF</button>
+    </div>
+
+    <div class="analysis-section-space"></div>
+
+    <h2>Results and Analysis</h2>
     <div id="finalResults"></div>
 
     <button class="reset-button" onclick="resetApp()">Reset</button>
@@ -739,7 +780,7 @@ function makeScoresheet(title) {
 
   return `
     <div class="log-section">
-      <h2>${title}</h2>
+      ${title ? `<h2>${title}</h2>` : ""}
       <div class="scoresheet-wrap">
         <table>
           <thead>
@@ -806,14 +847,16 @@ function findMaxItems(counts) {
   };
 }
 
-function formatAnalysis(directionData, machineData, emptyText) {
-  if (directionData.max === 0 && machineData.max === 0) {
-    return emptyText;
-  }
+function formatAnalysis(directionData, machineData) {
+  const directionText =
+    directionData.max === 0 ? "None" : directionData.items.join(", ");
+
+  const machineText =
+    machineData.max === 0 ? "None" : machineData.items.join(", ");
 
   return `
-    <p>Most missed direction: ${directionData.items.join(", ")} with ${directionData.max}.</p>
-    <p>Most missed machine: ${machineData.items.map(m => "Machine " + m).join(", ")} with ${machineData.max}.</p>
+    <p>Most Missed Direction: ${directionText}</p>
+    <p>Most Missed Machine: ${machineText}</p>
   `;
 }
 
@@ -832,19 +875,13 @@ function makeShooterAnalysis(s) {
 
   return `
     <div class="analysis-box">
-      <p><strong>Analysis:</strong> only regular misses are counted.</p>
-      ${formatAnalysis(
-        regularDirectionMax,
-        regularMachineMax,
-        "No regular misses recorded."
-      )}
+      <p><strong>Analysis</strong></p>
+      ${formatAnalysis(regularDirectionMax, regularMachineMax)}
 
-      <p><strong>Single Shot Analysis:</strong> regular misses and double shots are counted because a double means the first shot was missed.</p>
-      ${formatAnalysis(
-        singleDirectionMax,
-        singleMachineMax,
-        "No single shot misses recorded."
-      )}
+      <hr class="analysis-divider">
+
+      <p><strong>Single Shot Analysis</strong></p>
+      ${formatAnalysis(singleDirectionMax, singleMachineMax)}
     </div>
   `;
 }
@@ -853,7 +890,7 @@ function endRound() {
   document.getElementById("scoreArea").classList.add("hidden");
   document.getElementById("finalPage").classList.remove("hidden");
 
-  document.getElementById("finalLogs").innerHTML = makeScoresheet("Final Scoresheet");
+  document.getElementById("finalLogs").innerHTML = makeScoresheet("");
 
   let html = "";
 
@@ -870,6 +907,63 @@ function endRound() {
   });
 
   document.getElementById("finalResults").innerHTML = html;
+}
+
+async function exportScoresheetImage() {
+  const element = document.getElementById("finalLogs");
+
+  const canvas = await html2canvas(element, {
+    backgroundColor: "#ffffff",
+    scale: 3
+  });
+
+  const link = document.createElement("a");
+  link.download = "trap-scoresheet.png";
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+}
+
+async function exportScoresheetPDF() {
+  const element = document.getElementById("finalLogs");
+
+  const canvas = await html2canvas(element, {
+    backgroundColor: "#ffffff",
+    scale: 3
+  });
+
+  const imgData = canvas.toDataURL("image/png");
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({
+    orientation: "portrait",
+    unit: "mm",
+    format: "a4"
+  });
+
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+
+  const imgWidth = pageWidth - 20;
+  const imgHeight = canvas.height * imgWidth / canvas.width;
+
+  if (imgHeight <= pageHeight - 20) {
+    pdf.addImage(imgData, "PNG", 10, 10, imgWidth, imgHeight);
+  } else {
+    let heightLeft = imgHeight;
+    let position = 10;
+
+    pdf.addImage(imgData, "PNG", 10, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight - 20;
+
+    while (heightLeft > 0) {
+      position -= pageHeight - 20;
+      pdf.addPage();
+      pdf.addImage(imgData, "PNG", 10, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight - 20;
+    }
+  }
+
+  pdf.save("trap-scoresheet.pdf");
 }
 
 function resetApp() {

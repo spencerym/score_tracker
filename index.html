@@ -5,9 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       font-family: Arial, sans-serif;
@@ -121,9 +119,7 @@
       transform: scale(1.03);
     }
 
-    .machine-column button.locked {
-      background: #999;
-    }
+    .machine-column button.locked { background: #999; }
 
     .result-buttons {
       display: grid;
@@ -167,7 +163,7 @@
     }
 
     .score-symbol {
-      font-size: 13px;
+      font-size: 15px;
       font-weight: bold;
       line-height: 1;
       display: block;
@@ -201,9 +197,7 @@
       color: white;
     }
 
-    .hidden {
-      display: none;
-    }
+    .hidden { display: none; }
 
     .log-section {
       margin-top: 18px;
@@ -280,22 +274,15 @@
     }
 
     @media (max-width: 480px) {
-      body {
-        padding: 6px;
-      }
+      body { padding: 6px; }
 
       .container {
         padding: 10px;
         border-radius: 12px;
       }
 
-      h1 {
-        font-size: 20px;
-      }
-
-      h2 {
-        font-size: 18px;
-      }
+      h1 { font-size: 20px; }
+      h2 { font-size: 18px; }
 
       input, select, button {
         font-size: 15px;
@@ -318,9 +305,7 @@
         font-size: 13px;
       }
 
-      .scoresheet-cell {
-        min-width: 165px;
-      }
+      .scoresheet-cell { min-width: 165px; }
     }
   </style>
 </head>
@@ -502,9 +487,7 @@ function checkStations() {
       const second = i;
       const allowed = count === 6 && (first === 5 || second === 5);
 
-      if (!allowed) {
-        invalid = true;
-      }
+      if (!allowed) invalid = true;
     } else {
       stationOwner[station] = i;
     }
@@ -581,9 +564,7 @@ function updateDisplay() {
   while (shooters[currentShooterIndex].shots >= 25) {
     currentShooterIndex++;
 
-    if (currentShooterIndex >= shooters.length) {
-      currentShooterIndex = 0;
-    }
+    if (currentShooterIndex >= shooters.length) currentShooterIndex = 0;
   }
 
   const shooter = shooters[currentShooterIndex];
@@ -672,15 +653,11 @@ function recordShot(result) {
 
   shooter.station++;
 
-  if (shooter.station > 5) {
-    shooter.station = 1;
-  }
+  if (shooter.station > 5) shooter.station = 1;
 
   currentShooterIndex++;
 
-  if (currentShooterIndex >= shooters.length) {
-    currentShooterIndex = 0;
-  }
+  if (currentShooterIndex >= shooters.length) currentShooterIndex = 0;
 
   updateDisplay();
 }
@@ -723,9 +700,7 @@ function updateScoreTable() {
 }
 
 function makeShotCell(entry) {
-  if (!entry) {
-    return `<span class="empty-scorecell"></span>`;
-  }
+  if (!entry) return `<span class="empty-scorecell"></span>`;
 
   return `
     <span class="scorecell">
@@ -774,9 +749,7 @@ function makeScoresheet(title) {
               <th>Score</th>
             </tr>
           </thead>
-          <tbody>
-            ${rows}
-          </tbody>
+          <tbody>${rows}</tbody>
         </table>
       </div>
     </div>
@@ -806,6 +779,18 @@ function makeFinalSymbolSummary(s) {
   `;
 }
 
+function countByEntries(entries) {
+  const directionCounts = {};
+  const machineCounts = {};
+
+  entries.forEach(entry => {
+    directionCounts[entry.direction] = (directionCounts[entry.direction] || 0) + 1;
+    machineCounts[entry.machine] = (machineCounts[entry.machine] || 0) + 1;
+  });
+
+  return { directionCounts, machineCounts };
+}
+
 function findMaxItems(counts) {
   let max = 0;
 
@@ -813,12 +798,7 @@ function findMaxItems(counts) {
     if (value > max) max = value;
   });
 
-  if (max === 0) {
-    return {
-      max: 0,
-      items: []
-    };
-  }
+  if (max === 0) return { max: 0, items: [] };
 
   return {
     max: max,
@@ -826,57 +806,45 @@ function findMaxItems(counts) {
   };
 }
 
-function makeShooterAnalysis(s) {
-  const directionMisses = {};
-  const machineMisses = {};
-  const resultMisses = {
-    Miss: 0,
-    Double: 0
-  };
-
-  s.log.forEach(entry => {
-    if (entry.result !== "Hit") {
-      directionMisses[entry.direction] = (directionMisses[entry.direction] || 0) + 1;
-      machineMisses[entry.machine] = (machineMisses[entry.machine] || 0) + 1;
-
-      if (entry.result === "Miss") resultMisses.Miss++;
-      if (entry.result === "Double") resultMisses.Double++;
-    }
-  });
-
-  const topDirections = findMaxItems(directionMisses);
-  const topMachines = findMaxItems(machineMisses);
-
-  let directionText = "No misses or doubles recorded.";
-  let machineText = "No missed machines recorded.";
-  let singleShotText = "No single shot misses recorded.";
-
-  if (topDirections.max > 0) {
-    directionText =
-      "Most missed direction: " + topDirections.items.join(", ") +
-      " with " + topDirections.max + " total.";
-  }
-
-  if (topMachines.max > 0) {
-    machineText =
-      "Most missed machine: " + topMachines.items.map(m => "Machine " + m).join(", ") +
-      " with " + topMachines.max + " total.";
-  }
-
-  if (resultMisses.Miss + resultMisses.Double > 0) {
-    singleShotText =
-      "Single shot miss count, with doubles counted as misses: " +
-      (resultMisses.Miss + resultMisses.Double) +
-      ". True misses: " + resultMisses.Miss +
-      ". Doubles: " + resultMisses.Double + ".";
+function formatAnalysis(directionData, machineData, emptyText) {
+  if (directionData.max === 0 && machineData.max === 0) {
+    return emptyText;
   }
 
   return `
+    <p>Most missed direction: ${directionData.items.join(", ")} with ${directionData.max}.</p>
+    <p>Most missed machine: ${machineData.items.map(m => "Machine " + m).join(", ")} with ${machineData.max}.</p>
+  `;
+}
+
+function makeShooterAnalysis(s) {
+  const regularMissEntries = s.log.filter(entry => entry.result === "Miss");
+  const singleShotMissEntries = s.log.filter(entry => entry.result === "Miss" || entry.result === "Double");
+
+  const regularCounts = countByEntries(regularMissEntries);
+  const singleShotCounts = countByEntries(singleShotMissEntries);
+
+  const regularDirectionMax = findMaxItems(regularCounts.directionCounts);
+  const regularMachineMax = findMaxItems(regularCounts.machineCounts);
+
+  const singleDirectionMax = findMaxItems(singleShotCounts.directionCounts);
+  const singleMachineMax = findMaxItems(singleShotCounts.machineCounts);
+
+  return `
     <div class="analysis-box">
-      <p><strong>Analysis:</strong></p>
-      <p>${directionText}</p>
-      <p>${machineText}</p>
-      <p>${singleShotText}</p>
+      <p><strong>Analysis:</strong> only regular misses are counted.</p>
+      ${formatAnalysis(
+        regularDirectionMax,
+        regularMachineMax,
+        "No regular misses recorded."
+      )}
+
+      <p><strong>Single Shot Analysis:</strong> regular misses and double shots are counted because a double means the first shot was missed.</p>
+      ${formatAnalysis(
+        singleDirectionMax,
+        singleMachineMax,
+        "No single shot misses recorded."
+      )}
     </div>
   `;
 }

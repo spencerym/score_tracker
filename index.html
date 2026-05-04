@@ -88,32 +88,40 @@
       margin: 8px 0;
     }
 
-    .target-counts {
-      font-weight: bold;
-      margin: 8px 0;
-      font-size: 15px;
-    }
-
-    .machine-buttons {
+    .machine-area {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 8px;
       margin: 8px 0;
     }
 
-    .machine-buttons button {
+    .machine-column {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .direction-count {
+      font-size: 13px;
+      font-weight: bold;
+      margin-bottom: 4px;
+      color: #333;
+      text-align: center;
+    }
+
+    .machine-column button {
       margin: 0;
       min-height: 52px;
       background: #6b87c7;
     }
 
-    .machine-buttons button.selected {
+    .machine-column button.selected {
       background: #062d91;
       outline: 4px solid rgba(6, 45, 145, 0.25);
       transform: scale(1.03);
     }
 
-    .machine-buttons button.locked {
+    .machine-column button.locked {
       background: #999;
     }
 
@@ -159,7 +167,7 @@
     }
 
     .score-symbol {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: bold;
       line-height: 1;
       display: block;
@@ -206,16 +214,16 @@
 
     .scoresheet-cell {
       text-align: center;
-      min-width: 185px;
+      min-width: 175px;
     }
 
     .shot-group {
       display: grid;
-      grid-template-columns: repeat(5, 24px);
+      grid-template-columns: repeat(5, 22px);
       justify-content: center;
-      gap: 4px;
+      gap: 2px;
       margin: 3px auto;
-      min-height: 28px;
+      min-height: 25px;
     }
 
     .scorecell {
@@ -223,19 +231,19 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      width: 24px;
-      min-height: 28px;
+      width: 22px;
+      min-height: 25px;
     }
 
     .machine-number {
-      font-size: 14px;
-      font-weight: bold;
+      font-size: 13px;
+      font-weight: normal;
       line-height: 1;
     }
 
     .empty-scorecell {
-      width: 24px;
-      min-height: 28px;
+      width: 22px;
+      min-height: 25px;
     }
 
     .final-card {
@@ -255,6 +263,20 @@
     .final-symbol-item {
       font-weight: bold;
       text-align: center;
+    }
+
+    .analysis-box {
+      background: white;
+      border-radius: 10px;
+      padding: 10px;
+      margin-top: 10px;
+      text-align: left;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .analysis-box p {
+      margin: 5px 0;
     }
 
     @media (max-width: 480px) {
@@ -280,12 +302,12 @@
         padding: 11px;
       }
 
-      .machine-buttons,
+      .machine-area,
       .result-buttons {
         gap: 6px;
       }
 
-      .machine-buttons button,
+      .machine-column button,
       .result-buttons button {
         font-size: 14px;
         min-height: 48px;
@@ -294,6 +316,10 @@
       th, td {
         padding: 6px;
         font-size: 13px;
+      }
+
+      .scoresheet-cell {
+        min-width: 165px;
       }
     }
   </style>
@@ -328,9 +354,7 @@
         Each shooter can receive 2 right, 1 straight, and 2 left targets from each station.
       </p>
 
-      <div id="targetCounts" class="target-counts"></div>
-
-      <div id="machineButtons" class="machine-buttons"></div>
+      <div id="machineButtons" class="machine-area"></div>
 
       <div class="result-buttons">
         <button class="hit" onclick="recordShot('Hit')">/ Hit</button>
@@ -364,9 +388,11 @@
   </div>
 
   <div id="finalPage" class="hidden">
-    <h2>Final Results</h2>
-    <div id="finalResults"></div>
+    <h2>Final Scoresheet</h2>
     <div id="finalLogs"></div>
+
+    <h2>Final Results and Analysis</h2>
+    <div id="finalResults"></div>
 
     <button class="reset-button" onclick="resetApp()">Reset</button>
   </div>
@@ -568,7 +594,6 @@ function updateDisplay() {
   document.getElementById("currentShotText").textContent =
     "Shot " + (shooter.shots + 1) + " of 25";
 
-  updateCounts(shooter);
   createMachineButtons(shooter);
   updateScoreTable();
   updateLogs();
@@ -582,6 +607,14 @@ function createMachineButtons(shooter) {
   const counts = shooter.targetCounts[station];
 
   stationMachines[station].forEach(m => {
+    const column = document.createElement("div");
+    column.className = "machine-column";
+
+    const label = document.createElement("div");
+    label.className = "direction-count";
+    label.textContent =
+      m.direction + " " + counts[m.direction] + "/" + directionLimits[m.direction];
+
     const button = document.createElement("button");
     button.textContent = "Machine " + m.number;
 
@@ -597,22 +630,17 @@ function createMachineButtons(shooter) {
       selectedDirection = m.direction;
       setMessage("");
 
-      document.querySelectorAll(".machine-buttons button").forEach(b => {
+      document.querySelectorAll(".machine-column button").forEach(b => {
         b.classList.remove("selected");
       });
 
       button.classList.add("selected");
     };
 
-    div.appendChild(button);
+    column.appendChild(label);
+    column.appendChild(button);
+    div.appendChild(column);
   });
-}
-
-function updateCounts(shooter) {
-  const c = shooter.targetCounts[shooter.station];
-
-  document.getElementById("targetCounts").textContent =
-    "Right " + c.Right + "/2   Straight " + c.Straight + "/1   Left " + c.Left + "/2";
 }
 
 function recordShot(result) {
@@ -638,6 +666,7 @@ function recordShot(result) {
 
   shooter.log.push({
     machine: selectedMachine,
+    direction: selectedDirection,
     result: result
   });
 
@@ -777,9 +806,86 @@ function makeFinalSymbolSummary(s) {
   `;
 }
 
+function findMaxItems(counts) {
+  let max = 0;
+
+  Object.values(counts).forEach(value => {
+    if (value > max) max = value;
+  });
+
+  if (max === 0) {
+    return {
+      max: 0,
+      items: []
+    };
+  }
+
+  return {
+    max: max,
+    items: Object.keys(counts).filter(key => counts[key] === max)
+  };
+}
+
+function makeShooterAnalysis(s) {
+  const directionMisses = {};
+  const machineMisses = {};
+  const resultMisses = {
+    Miss: 0,
+    Double: 0
+  };
+
+  s.log.forEach(entry => {
+    if (entry.result !== "Hit") {
+      directionMisses[entry.direction] = (directionMisses[entry.direction] || 0) + 1;
+      machineMisses[entry.machine] = (machineMisses[entry.machine] || 0) + 1;
+
+      if (entry.result === "Miss") resultMisses.Miss++;
+      if (entry.result === "Double") resultMisses.Double++;
+    }
+  });
+
+  const topDirections = findMaxItems(directionMisses);
+  const topMachines = findMaxItems(machineMisses);
+
+  let directionText = "No misses or doubles recorded.";
+  let machineText = "No missed machines recorded.";
+  let singleShotText = "No single shot misses recorded.";
+
+  if (topDirections.max > 0) {
+    directionText =
+      "Most missed direction: " + topDirections.items.join(", ") +
+      " with " + topDirections.max + " total.";
+  }
+
+  if (topMachines.max > 0) {
+    machineText =
+      "Most missed machine: " + topMachines.items.map(m => "Machine " + m).join(", ") +
+      " with " + topMachines.max + " total.";
+  }
+
+  if (resultMisses.Miss + resultMisses.Double > 0) {
+    singleShotText =
+      "Single shot miss count, with doubles counted as misses: " +
+      (resultMisses.Miss + resultMisses.Double) +
+      ". True misses: " + resultMisses.Miss +
+      ". Doubles: " + resultMisses.Double + ".";
+  }
+
+  return `
+    <div class="analysis-box">
+      <p><strong>Analysis:</strong></p>
+      <p>${directionText}</p>
+      <p>${machineText}</p>
+      <p>${singleShotText}</p>
+    </div>
+  `;
+}
+
 function endRound() {
   document.getElementById("scoreArea").classList.add("hidden");
   document.getElementById("finalPage").classList.remove("hidden");
+
+  document.getElementById("finalLogs").innerHTML = makeScoresheet("Final Scoresheet");
 
   let html = "";
 
@@ -788,15 +894,14 @@ function endRound() {
       <div class="final-card">
         <h3>${s.name}</h3>
         <p><strong>Starting Station:</strong> ${s.startStation}</p>
-        <p><strong>Shots:</strong> ${s.shots}/25</p>
         <p><strong>Final Score:</strong> ${s.hits + s.doubles}</p>
         ${makeFinalSymbolSummary(s)}
+        ${makeShooterAnalysis(s)}
       </div>
     `;
   });
 
   document.getElementById("finalResults").innerHTML = html;
-  document.getElementById("finalLogs").innerHTML = makeScoresheet("Final Scoresheet");
 }
 
 function resetApp() {

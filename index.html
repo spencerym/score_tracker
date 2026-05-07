@@ -26,23 +26,7 @@
       border-radius: 16px;
     }
 
-    h1 {
-      font-size: 22px;
-      text-align: center;
-      margin: 8px 0 16px;
-    }
-
-    h2 {
-      font-size: 20px;
-      text-align: center;
-      margin: 12px 0;
-    }
-
-    h3 {
-      font-size: 17px;
-      text-align: center;
-      margin: 8px 0;
-    }
+    h1, h2, h3 { text-align: center; }
 
     input, select, button {
       width: 100%;
@@ -80,6 +64,7 @@
       padding: 14px;
       border-radius: 16px;
       margin-top: 12px;
+      margin-bottom: 6px;
       text-align: center;
     }
 
@@ -122,9 +107,7 @@
       transform: scale(1.03);
     }
 
-    .machine-column button.locked {
-      background: #999;
-    }
+    .machine-column button.locked { background: #999; }
 
     .result-buttons {
       display: grid;
@@ -143,14 +126,15 @@
     .double { background: #7a42c8; }
 
     .control-buttons {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
       margin-top: 10px;
     }
 
     .back-button { background: #b35b00; }
-    .end-button { background: #111; }
+
+    .end-button {
+      background: #111;
+      margin-top: 28px;
+    }
 
     .export-buttons {
       margin: 18px 0 28px;
@@ -184,19 +168,16 @@
       display: block;
     }
 
-    .double-symbol {
-      font-size: 18px;
-    }
+    .double-symbol { font-size: 18px; }
 
     .hit-symbol { color: #26834a; }
     .miss-symbol { color: #a83232; }
     .double-symbol { color: #7a42c8; }
 
-    .summary-table-wrap,
     .scoresheet-wrap {
       width: 100%;
       overflow-x: auto;
-      margin-top: 12px;
+      margin-top: 8px;
     }
 
     table {
@@ -219,10 +200,18 @@
     .hidden { display: none; }
 
     .log-section {
-      margin-top: 18px;
+      margin-top: 8px;
       padding: 10px;
       background: #fafafa;
       border-radius: 14px;
+    }
+
+    .round-info {
+      text-align: center;
+      font-size: 13px;
+      color: #333;
+      margin-bottom: 10px;
+      line-height: 1.5;
     }
 
     .scoresheet-cell {
@@ -259,6 +248,14 @@
       min-height: 25px;
     }
 
+    .station-subtitle {
+      display: block;
+      font-size: 12px;
+      font-weight: normal;
+      margin-top: 3px;
+      color: #555;
+    }
+
     .final-card {
       background: #f1f4ff;
       padding: 12px;
@@ -288,24 +285,14 @@
       line-height: 1.4;
     }
 
-    .analysis-box p {
-      margin: 5px 0;
-    }
-
     .analysis-divider {
       border: none;
       border-top: 1px solid #ccc;
       margin: 10px 0;
     }
 
-    .analysis-section-space {
-      height: 6px;
-    }
-
     @media (max-width: 480px) {
-      body {
-        padding: 6px;
-      }
+      body { padding: 6px; }
 
       .container {
         padding: 10px;
@@ -337,9 +324,7 @@
         font-size: 13px;
       }
 
-      .scoresheet-cell {
-        min-width: 165px;
-      }
+      .scoresheet-cell { min-width: 165px; }
     }
   </style>
 </head>
@@ -352,7 +337,7 @@
     <h2>Set Up Shooters</h2>
 
     <label>Number of shooters:</label>
-    <input type="number" id="shooterCount" min="1" max="6" value="3">
+    <input type="number" id="shooterCount" min="1" max="6" value="3" onchange="createShooterInputs()">
     <button onclick="createShooterInputs()">Create Shooters</button>
 
     <p class="message" id="stationWarning"></p>
@@ -385,25 +370,12 @@
 
       <div class="control-buttons">
         <button class="back-button" onclick="undoLastShot()">Back</button>
-        <button class="end-button" onclick="endRound()">End Round</button>
       </div>
     </div>
 
-    <div class="summary-table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Shooter</th>
-            <th>Station</th>
-            <th>Shots</th>
-            <th>Score</th>
-          </tr>
-        </thead>
-        <tbody id="scoreTable"></tbody>
-      </table>
-    </div>
-
     <div id="allLogs"></div>
+
+    <button class="end-button" onclick="endRound()">End Round</button>
   </div>
 
   <div id="finalPage" class="hidden">
@@ -414,8 +386,6 @@
       <button class="export-image" onclick="exportScoresheetImage()">Export Image</button>
       <button class="export-pdf" onclick="exportScoresheetPDF()">Export PDF</button>
     </div>
-
-    <div class="analysis-section-space"></div>
 
     <h2>Results and Analysis</h2>
     <div id="finalResults"></div>
@@ -431,6 +401,10 @@ let currentShooterIndex = 0;
 let selectedMachine = null;
 let selectedDirection = null;
 let history = [];
+let savedNames = [];
+let savedStations = [];
+let roundStartTime = null;
+let roundEndTime = null;
 
 const stationMachines = {
   1: [
@@ -466,20 +440,61 @@ const directionLimits = {
   Left: 2
 };
 
+function formatDateTime(date) {
+  if (!date) return "Not recorded";
+
+  return date.toLocaleString([], {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
+}
+
+function saveCurrentSetup() {
+  const count = Number(document.getElementById("shooterCount").value);
+
+  for (let i = 0; i < count; i++) {
+    const nameInput = document.getElementById("name" + i);
+    const stationInput = document.getElementById("station" + i);
+
+    if (nameInput) savedNames[i] = nameInput.value;
+    if (stationInput) savedStations[i] = Number(stationInput.value);
+  }
+}
+
+function escapeHtml(text) {
+  return String(text)
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
 function setMessage(text) {
   document.getElementById("actionMessage").textContent = text || "";
 }
 
 function createShooterInputs() {
-  const count = Number(document.getElementById("shooterCount").value);
+  saveCurrentSetup();
+
+  let count = Number(document.getElementById("shooterCount").value);
+
+  if (count < 1) count = 1;
+  if (count > 6) count = 6;
+
+  document.getElementById("shooterCount").value = count;
+
   const div = document.getElementById("shooterInputs");
   div.innerHTML = "";
 
   for (let i = 0; i < count; i++) {
-    let defaultStation = i + 1;
+    let defaultStation = savedStations[i];
 
-    if (i === 5) {
-      defaultStation = 1;
+    if (!defaultStation) {
+      defaultStation = i + 1;
+      if (i === 5) defaultStation = 1;
     }
 
     let options = "";
@@ -489,13 +504,15 @@ function createShooterInputs() {
       options += `<option value="${s}" ${selected}>Station ${s}</option>`;
     }
 
+    const savedName = savedNames[i] || "";
+
     div.insertAdjacentHTML("beforeend", `
       <div class="shooter-row">
         <label>Shooter ${i + 1} name:</label>
-        <input type="text" id="name${i}" value="Shooter ${i + 1}">
+        <input type="text" id="name${i}" value="${escapeHtml(savedName)}" placeholder="Enter shooter name" oninput="saveCurrentSetup()">
 
         <label>Starting station:</label>
-        <select id="station${i}" onchange="checkStations()">
+        <select id="station${i}" onchange="saveCurrentSetup(); checkStations();">
           ${options}
         </select>
       </div>
@@ -539,14 +556,26 @@ function checkStations() {
 }
 
 function startRound() {
+  saveCurrentSetup();
+
   const count = Number(document.getElementById("shooterCount").value);
   const stationOwner = {};
 
   shooters = [];
   history = [];
   currentShooterIndex = 0;
+  roundStartTime = new Date();
+  roundEndTime = null;
 
   for (let i = 0; i < count; i++) {
+    const name = document.getElementById("name" + i).value.trim();
+
+    if (name === "") {
+      document.getElementById("stationWarning").textContent =
+        "Shooter names cannot be blank.";
+      return;
+    }
+
     const station = Number(document.getElementById("station" + i).value);
 
     if (stationOwner[station] !== undefined) {
@@ -564,7 +593,7 @@ function startRound() {
     }
 
     shooters.push({
-      name: document.getElementById("name" + i).value,
+      name: name,
       startStation: station,
       station: station,
       shooterNumber: i + 1,
@@ -604,7 +633,6 @@ function updateDisplay() {
 
   while (shooters[currentShooterIndex].shots >= 25) {
     currentShooterIndex++;
-
     if (currentShooterIndex >= shooters.length) currentShooterIndex = 0;
   }
 
@@ -617,7 +645,6 @@ function updateDisplay() {
     "Shot " + (shooter.shots + 1) + " of 25";
 
   createMachineButtons(shooter);
-  updateScoreTable();
   updateLogs();
 }
 
@@ -693,11 +720,9 @@ function recordShot(result) {
   });
 
   shooter.station++;
-
   if (shooter.station > 5) shooter.station = 1;
 
   currentShooterIndex++;
-
   if (currentShooterIndex >= shooters.length) currentShooterIndex = 0;
 
   updateDisplay();
@@ -724,22 +749,6 @@ function getSymbol(result) {
   return `<span class="score-symbol double-symbol">•</span>`;
 }
 
-function updateScoreTable() {
-  const tbody = document.getElementById("scoreTable");
-  tbody.innerHTML = "";
-
-  originalOrder.forEach(s => {
-    tbody.insertAdjacentHTML("beforeend", `
-      <tr>
-        <td>${s.name}</td>
-        <td>${s.station}</td>
-        <td>${s.shots}/25</td>
-        <td>${s.hits + s.doubles}</td>
-      </tr>
-    `);
-  });
-}
-
 function makeShotCell(entry) {
   if (!entry) return `<span class="empty-scorecell"></span>`;
 
@@ -751,7 +760,7 @@ function makeShotCell(entry) {
   `;
 }
 
-function makeScoresheet(title) {
+function makeScoresheet(title, includeRoundInfo) {
   let rows = "";
 
   originalOrder.forEach(s => {
@@ -771,16 +780,27 @@ function makeScoresheet(title) {
 
     rows += `
       <tr>
-        <td><strong>${s.name}</strong></td>
+        <td>
+          <strong>${s.name}</strong>
+          <span class="station-subtitle">(Station ${s.startStation})</span>
+        </td>
         <td class="scoresheet-cell">${html || "No shots yet"}</td>
         <td><strong>${s.hits + s.doubles}</strong></td>
       </tr>
     `;
   });
 
+  const roundInfo = includeRoundInfo ? `
+    <div class="round-info">
+      <div><strong>Round Started:</strong> ${formatDateTime(roundStartTime)}</div>
+      <div><strong>Round Ended:</strong> ${formatDateTime(roundEndTime)}</div>
+    </div>
+  ` : "";
+
   return `
     <div class="log-section">
       ${title ? `<h2>${title}</h2>` : ""}
+      ${roundInfo}
       <div class="scoresheet-wrap">
         <table>
           <thead>
@@ -798,7 +818,7 @@ function makeScoresheet(title) {
 }
 
 function updateLogs() {
-  document.getElementById("allLogs").innerHTML = makeScoresheet("Scoresheet");
+  document.getElementById("allLogs").innerHTML = makeScoresheet("Scoresheet", false);
 }
 
 function makeFinalSymbolSummary(s) {
@@ -820,77 +840,99 @@ function makeFinalSymbolSummary(s) {
   `;
 }
 
-function countByEntries(entries) {
-  const directionCounts = {};
-  const machineCounts = {};
+function getRateAnalysis(entries, missRule) {
+  const directionData = {};
+  const machineData = {};
 
   entries.forEach(entry => {
-    directionCounts[entry.direction] = (directionCounts[entry.direction] || 0) + 1;
-    machineCounts[entry.machine] = (machineCounts[entry.machine] || 0) + 1;
+    if (!directionData[entry.direction]) {
+      directionData[entry.direction] = { misses: 0, total: 0 };
+    }
+
+    if (!machineData[entry.machine]) {
+      machineData[entry.machine] = { misses: 0, total: 0 };
+    }
+
+    directionData[entry.direction].total++;
+    machineData[entry.machine].total++;
+
+    if (missRule(entry)) {
+      directionData[entry.direction].misses++;
+      machineData[entry.machine].misses++;
+    }
   });
-
-  return { directionCounts, machineCounts };
-}
-
-function findMaxItems(counts) {
-  let max = 0;
-
-  Object.values(counts).forEach(value => {
-    if (value > max) max = value;
-  });
-
-  if (max === 0) return { max: 0, items: [] };
 
   return {
-    max: max,
-    items: Object.keys(counts).filter(key => counts[key] === max)
+    direction: getBestRateItems(directionData),
+    machine: getBestRateItems(machineData)
   };
 }
 
-function formatAnalysis(directionData, machineData) {
-  const directionText =
-    directionData.max === 0 ? "None" : directionData.items.join(", ");
+function getBestRateItems(data) {
+  let bestRate = 0;
+  let bestItems = [];
 
-  const machineText =
-    machineData.max === 0 ? "None" : machineData.items.join(", ");
+  Object.keys(data).forEach(key => {
+    const item = data[key];
 
-  return `
-    <p>Most Missed Direction: ${directionText}</p>
-    <p>Most Missed Machine: ${machineText}</p>
-  `;
+    if (item.total === 0 || item.misses === 0) return;
+
+    const rate = item.misses / item.total;
+
+    if (rate > bestRate) {
+      bestRate = rate;
+      bestItems = [key];
+    } else if (rate === bestRate) {
+      bestItems.push(key);
+    }
+  });
+
+  if (bestItems.length === 0) {
+    return "None";
+  }
+
+  return bestItems.map(key => {
+    const item = data[key];
+    const percent = Math.round((item.misses / item.total) * 100);
+    return `${key} ${item.misses}/${item.total} (${percent}%)`;
+  }).join(", ");
 }
 
 function makeShooterAnalysis(s) {
-  const regularMissEntries = s.log.filter(entry => entry.result === "Miss");
-  const singleShotMissEntries = s.log.filter(entry => entry.result === "Miss" || entry.result === "Double");
+  const regular = getRateAnalysis(
+    s.log,
+    entry => entry.result === "Miss"
+  );
 
-  const regularCounts = countByEntries(regularMissEntries);
-  const singleShotCounts = countByEntries(singleShotMissEntries);
-
-  const regularDirectionMax = findMaxItems(regularCounts.directionCounts);
-  const regularMachineMax = findMaxItems(regularCounts.machineCounts);
-
-  const singleDirectionMax = findMaxItems(singleShotCounts.directionCounts);
-  const singleMachineMax = findMaxItems(singleShotCounts.machineCounts);
+  const singleShot = getRateAnalysis(
+    s.log,
+    entry => entry.result === "Miss" || entry.result === "Double"
+  );
 
   return `
     <div class="analysis-box">
       <p><strong>Analysis</strong></p>
-      ${formatAnalysis(regularDirectionMax, regularMachineMax)}
+      <p>Most Missed Direction: ${regular.direction}</p>
+      <p>Most Missed Machine: ${regular.machine}</p>
 
       <hr class="analysis-divider">
 
       <p><strong>Single Shot Analysis</strong></p>
-      ${formatAnalysis(singleDirectionMax, singleMachineMax)}
+      <p>Most Missed Direction: ${singleShot.direction}</p>
+      <p>Most Missed Machine: ${singleShot.machine}</p>
     </div>
   `;
 }
 
 function endRound() {
+  if (!roundEndTime) {
+    roundEndTime = new Date();
+  }
+
   document.getElementById("scoreArea").classList.add("hidden");
   document.getElementById("finalPage").classList.remove("hidden");
 
-  document.getElementById("finalLogs").innerHTML = makeScoresheet("");
+  document.getElementById("finalLogs").innerHTML = makeScoresheet("", true);
 
   let html = "";
 
@@ -917,10 +959,28 @@ async function exportScoresheetImage() {
     scale: 3
   });
 
-  const link = document.createElement("a");
-  link.download = "trap-scoresheet.png";
-  link.href = canvas.toDataURL("image/png");
-  link.click();
+  const dataUrl = canvas.toDataURL("image/png");
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+  if (isIOS) {
+    const newWindow = window.open();
+    newWindow.document.write(`
+      <html>
+        <body style="margin:0; background:white;">
+          <img src="${dataUrl}" style="width:100%; height:auto;">
+          <p style="font-family:Arial; padding:12px;">
+            Long press the image, then choose Save to Photos.
+          </p>
+        </body>
+      </html>
+    `);
+    newWindow.document.close();
+  } else {
+    const link = document.createElement("a");
+    link.download = "trap-scoresheet.png";
+    link.href = dataUrl;
+    link.click();
+  }
 }
 
 async function exportScoresheetPDF() {
@@ -967,12 +1027,16 @@ async function exportScoresheetPDF() {
 }
 
 function resetApp() {
+  saveCurrentSetup();
+
   shooters = [];
   originalOrder = [];
   currentShooterIndex = 0;
   selectedMachine = null;
   selectedDirection = null;
   history = [];
+  roundStartTime = null;
+  roundEndTime = null;
 
   document.getElementById("finalPage").classList.add("hidden");
   document.getElementById("scoreArea").classList.add("hidden");

@@ -125,9 +125,7 @@
     .miss { background: #a83232; }
     .double { background: #7a42c8; }
 
-    .control-buttons {
-      margin-top: 10px;
-    }
+    .control-buttons { margin-top: 10px; }
 
     .back-button { background: #b35b00; }
 
@@ -288,7 +286,68 @@
     .analysis-divider {
       border: none;
       border-top: 1px solid #ccc;
-      margin: 10px 0;
+      margin: 12px 0;
+    }
+
+    .analysis-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 7px;
+      margin-top: 8px;
+    }
+
+    .analysis-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-weight: bold;
+    }
+
+    .analysis-row span:last-child {
+      white-space: nowrap;
+    }
+
+    .rate-good {
+      background: #e7f7ec;
+      color: #176b35;
+    }
+
+    .rate-warning {
+      background: #fff2d8;
+      color: #9a5b00;
+    }
+
+    .rate-bad {
+      background: #ffe3e3;
+      color: #a83232;
+    }
+
+    .machine-chip-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .machine-chip {
+      padding: 7px 9px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    .analysis-title {
+      margin-bottom: 4px;
+      font-weight: bold;
+    }
+
+    .analysis-subtitle {
+      font-size: 13px;
+      color: #555;
+      margin: 2px 0 6px;
     }
 
     @media (max-width: 480px) {
@@ -440,6 +499,8 @@ const directionLimits = {
   Left: 2
 };
 
+const directionOrder = ["Left", "Straight", "Right"];
+
 function formatDateTime(date) {
   if (!date) return "Not recorded";
 
@@ -504,7 +565,7 @@ function createShooterInputs() {
       options += `<option value="${s}" ${selected}>Station ${s}</option>`;
     }
 
-    const savedName = savedNames[i] || "";
+    const savedName = savedNames[i] !== undefined ? savedNames[i] : "Shooter ";
 
     div.insertAdjacentHTML("beforeend", `
       <div class="shooter-row">
@@ -840,20 +901,28 @@ function makeFinalSymbolSummary(s) {
   `;
 }
 
-function getRateAnalysis(entries, missRule) {
-  const directionData = {};
+function getRateClass(rate) {
+  if (rate < 0.2) return "rate-good";
+  if (rate < 0.5) return "rate-warning";
+  return "rate-bad";
+}
+
+function buildAnalysisData(log, missRule) {
+  const directionData = {
+    Left: { misses: 0, total: 0 },
+    Straight: { misses: 0, total: 0 },
+    Right: { misses: 0, total: 0 }
+  };
+
   const machineData = {};
 
-  entries.forEach(entry => {
-    if (!directionData[entry.direction]) {
-      directionData[entry.direction] = { misses: 0, total: 0 };
-    }
+  log.forEach(entry => {
+    directionData[entry.direction].total++;
 
     if (!machineData[entry.machine]) {
       machineData[entry.machine] = { misses: 0, total: 0 };
     }
 
-    directionData[entry.direction].total++;
     machineData[entry.machine].total++;
 
     if (missRule(entry)) {
@@ -862,64 +931,80 @@ function getRateAnalysis(entries, missRule) {
     }
   });
 
-  return {
-    direction: getBestRateItems(directionData),
-    machine: getBestRateItems(machineData)
-  };
+  return { directionData, machineData };
 }
 
-function getBestRateItems(data) {
-  let bestRate = 0;
-  let bestItems = [];
+function makeDirectionRows(directionData) {
+  return directionOrder.map(direction => {
+    const data = directionData[direction];
+    const rate = data.total === 0 ? 0 : data.misses / data.total;
+    const percent = Math.round(rate * 100);
 
-  Object.keys(data).forEach(key => {
-    const item = data[key];
+    return `
+      <div class="analysis-row ${getRateClass(rate)}">
+        <span>${direction}</span>
+        <span>${data.misses}/${data.total} missed, ${percent}%</span>
+      </div>
+    `;
+  }).join("");
+}
 
-    if (item.total === 0 || item.misses === 0) return;
+function makeMachineChips(machineData) {
+  const machines = Object.keys(machineData)
+    .sort((a, b) => Number(a) - Number(b))
+    .filter(machine => machineData[machine].total > 0);
 
-    const rate = item.misses / item.total;
-
-    if (rate > bestRate) {
-      bestRate = rate;
-      bestItems = [key];
-    } else if (rate === bestRate) {
-      bestItems.push(key);
-    }
-  });
-
-  if (bestItems.length === 0) {
-    return "None";
+  if (machines.length === 0) {
+    return `<div class="analysis-subtitle">No machine data yet.</div>`;
   }
 
-  return bestItems.map(key => {
-    const item = data[key];
-    const percent = Math.round((item.misses / item.total) * 100);
-    return `${key} ${item.misses}/${item.total} (${percent}%)`;
-  }).join(", ");
+  return `
+    <div class="machine-chip-wrap">
+      ${machines.map(machine => {
+        const data = machineData[machine];
+        const rate = data.misses / data.total;
+        const percent = Math.round(rate * 100);
+
+        return `
+          <span class="machine-chip ${getRateClass(rate)}">
+            ${machine}: ${data.misses}/${data.total}, ${percent}%
+          </span>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function makeAnalysisSection(title, data) {
+  return `
+    <p class="analysis-title">${title}</p>
+    <div class="analysis-subtitle">Directions</div>
+    <div class="analysis-grid">
+      ${makeDirectionRows(data.directionData)}
+    </div>
+    <div class="analysis-subtitle">Machines</div>
+    ${makeMachineChips(data.machineData)}
+  `;
 }
 
 function makeShooterAnalysis(s) {
-  const regular = getRateAnalysis(
+  const regular = buildAnalysisData(
     s.log,
     entry => entry.result === "Miss"
   );
 
-  const singleShot = getRateAnalysis(
+  const singleShot = buildAnalysisData(
     s.log,
     entry => entry.result === "Miss" || entry.result === "Double"
   );
 
   return `
     <div class="analysis-box">
-      <p><strong>Analysis</strong></p>
-      <p>Most Missed Direction: ${regular.direction}</p>
-      <p>Most Missed Machine: ${regular.machine}</p>
+      ${makeAnalysisSection("Analysis", regular)}
 
       <hr class="analysis-divider">
 
-      <p><strong>Single Shot Analysis</strong></p>
-      <p>Most Missed Direction: ${singleShot.direction}</p>
-      <p>Most Missed Machine: ${singleShot.machine}</p>
+      ${makeAnalysisSection("Single Shot Analysis", singleShot)}
     </div>
   `;
 }
@@ -1023,7 +1108,8 @@ async function exportScoresheetPDF() {
     }
   }
 
-  pdf.save("trap-scoresheet.pdf");
+  const blobUrl = pdf.output("bloburl");
+  window.open(blobUrl, "_blank");
 }
 
 function resetApp() {

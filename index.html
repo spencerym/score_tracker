@@ -1,14 +1,21 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>International Trap Tracker</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Olympic Trap Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <style>
     * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+      touch-action: manipulation;
+    }
 
     body {
       font-family: Arial, sans-serif;
@@ -24,9 +31,48 @@
       background: white;
       padding: 14px;
       border-radius: 16px;
+      position: relative;
+    }
+
+    .settings-area {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 10;
+    }
+
+    .settings-button {
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      border-radius: 50%;
+      font-size: 20px;
+      background: #222;
+    }
+
+    .settings-menu {
+      position: absolute;
+      right: 0;
+      top: 46px;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 12px;
+      padding: 10px;
+      width: 170px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+    }
+
+    .settings-menu label {
+      font-size: 13px;
+      font-weight: bold;
     }
 
     h1, h2, h3 { text-align: center; }
+
+    h1 {
+      padding-right: 44px;
+      padding-left: 44px;
+    }
 
     input, select, button {
       width: 100%;
@@ -43,7 +89,6 @@
       color: white;
       border: none;
       font-weight: bold;
-      touch-action: manipulation;
     }
 
     button:disabled {
@@ -76,7 +121,7 @@
 
     .machine-area {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 8px;
       margin: 8px 0;
     }
@@ -85,6 +130,7 @@
       display: flex;
       flex-direction: column;
       align-items: stretch;
+      min-width: 0;
     }
 
     .direction-count {
@@ -99,6 +145,8 @@
       margin: 0;
       min-height: 52px;
       background: #6b87c7;
+      font-size: 14px;
+      padding: 10px 4px;
     }
 
     .machine-column button.selected {
@@ -111,7 +159,7 @@
 
     .result-buttons {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 8px;
       margin-top: 8px;
     }
@@ -119,6 +167,7 @@
     .result-buttons button {
       margin: 0;
       min-height: 52px;
+      padding: 10px 4px;
     }
 
     .hit { background: #26834a; }
@@ -325,18 +374,20 @@
       color: #a83232;
     }
 
-    .machine-chip-wrap {
-      display: flex;
-      flex-wrap: wrap;
+    .machine-station-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
       gap: 6px;
-      margin-top: 8px;
+      margin-top: 6px;
+      margin-bottom: 8px;
     }
 
     .machine-chip {
-      padding: 7px 9px;
+      padding: 7px 6px;
       border-radius: 999px;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: bold;
+      text-align: center;
     }
 
     .analysis-title {
@@ -348,6 +399,10 @@
       font-size: 13px;
       color: #555;
       margin: 2px 0 6px;
+    }
+
+    .machine-analysis-title {
+      margin-top: 12px;
     }
 
     @media (max-width: 480px) {
@@ -362,7 +417,7 @@
       h2 { font-size: 18px; }
 
       input, select, button {
-        font-size: 15px;
+        font-size: 16px;
         padding: 11px;
       }
 
@@ -374,7 +429,7 @@
 
       .machine-column button,
       .result-buttons button {
-        font-size: 14px;
+        font-size: 13px;
         min-height: 48px;
       }
 
@@ -390,66 +445,77 @@
 
 <body>
 <div class="container">
-  <h1>International Trap Score Tracker</h1>
+  <div class="settings-area" id="settingsArea">
+    <button class="settings-button" onclick="toggleSettings(event)">⚙</button>
+    <div id="settingsMenu" class="settings-menu hidden">
+      <label id="languageLabel">Language</label>
+      <select id="languageSelect" onchange="changeLanguage(this.value)">
+        <option value="en">English</option>
+        <option value="zh">简体中文</option>
+      </select>
+    </div>
+  </div>
+
+  <h1 data-i18n="appTitle">Olympic Trap Score Tracker</h1>
 
   <div id="setup">
-    <h2>Set Up Shooters</h2>
+    <h2 data-i18n="setupTitle">Set Up Shooters</h2>
 
-    <label>Number of shooters:</label>
+    <label data-i18n="numShooters">Number of shooters:</label>
     <input type="number" id="shooterCount" min="1" max="6" value="3" onchange="createShooterInputs()">
-    <button onclick="createShooterInputs()">Create Shooters</button>
+    <button onclick="createShooterInputs()" data-i18n="createShooters">Create Shooters</button>
 
     <p class="message" id="stationWarning"></p>
 
     <div id="shooterInputs"></div>
 
-    <button onclick="startRound()">Start Round</button>
+    <button onclick="startRound()" data-i18n="startRound">Start Round</button>
   </div>
 
   <div id="scoreArea" class="hidden">
-    <h2>Round Tracker</h2>
+    <h2 data-i18n="roundTracker">Round Tracker</h2>
 
     <div class="current-box">
       <h3 id="currentShooterText"></h3>
       <p id="currentShotText"></p>
 
-      <p class="target-note">
+      <p class="target-note" data-i18n="targetNote">
         Each shooter can receive 2 right, 1 straight, and 2 left targets from each station.
       </p>
 
       <div id="machineButtons" class="machine-area"></div>
 
       <div class="result-buttons">
-        <button class="hit" onclick="recordShot('Hit')">/ Hit</button>
-        <button class="miss" onclick="recordShot('Miss')">○ Miss</button>
-        <button class="double" onclick="recordShot('Double')">• Double</button>
+        <button class="hit" onclick="recordShot('Hit')">/ <span data-i18n="hit">Hit</span></button>
+        <button class="miss" onclick="recordShot('Miss')">○ <span data-i18n="miss">Miss</span></button>
+        <button class="double" onclick="recordShot('Double')">• <span data-i18n="double">Double</span></button>
       </div>
 
       <p class="message" id="actionMessage"></p>
 
       <div class="control-buttons">
-        <button class="back-button" onclick="undoLastShot()">Back</button>
+        <button class="back-button" onclick="undoLastShot()" data-i18n="back">Back</button>
       </div>
     </div>
 
     <div id="allLogs"></div>
 
-    <button class="end-button" onclick="endRound()">End Round</button>
+    <button class="end-button" onclick="endRound()" data-i18n="endRound">End Round</button>
   </div>
 
   <div id="finalPage" class="hidden">
-    <h2>Final Scoresheet</h2>
+    <h2 data-i18n="finalScoresheet">Final Scoresheet</h2>
     <div id="finalLogs"></div>
 
     <div class="export-buttons">
-      <button class="export-image" onclick="exportScoresheetImage()">Export Image</button>
-      <button class="export-pdf" onclick="exportScoresheetPDF()">Export PDF</button>
+      <button class="export-image" onclick="exportScoresheetImage()" data-i18n="exportImage">Export Image</button>
+      <button class="export-pdf" onclick="exportScoresheetPDF()" data-i18n="exportPDF">Export PDF</button>
     </div>
 
-    <h2>Results and Analysis</h2>
+    <h2 data-i18n="resultsAnalysis">Results and Analysis</h2>
     <div id="finalResults"></div>
 
-    <button class="reset-button" onclick="resetApp()">Reset</button>
+    <button class="reset-button" onclick="resetApp()" data-i18n="reset">Reset</button>
   </div>
 </div>
 
@@ -464,6 +530,110 @@ let savedNames = [];
 let savedStations = [];
 let roundStartTime = null;
 let roundEndTime = null;
+let currentLanguage = "en";
+
+const translations = {
+  en: {
+    appTitle: "Olympic Trap Score Tracker",
+    setupTitle: "Set Up Shooters",
+    numShooters: "Number of shooters:",
+    createShooters: "Create Shooters",
+    startRound: "Start Round",
+    roundTracker: "Round Tracker",
+    targetNote: "Each shooter can receive 2 right, 1 straight, and 2 left targets from each station.",
+    hit: "Hit",
+    miss: "Miss",
+    double: "Double",
+    back: "Back",
+    endRound: "End Round",
+    finalScoresheet: "Final Scoresheet",
+    exportImage: "Export Image",
+    exportPDF: "Export PDF",
+    resultsAnalysis: "Results and Analysis",
+    reset: "Reset",
+    language: "Language",
+    shooterName: "Shooter {n} name:",
+    startingStation: "Starting station:",
+    station: "Station",
+    enterShooterName: "Enter shooter name",
+    onlyShooter6: "Only shooter 6 can share a starting station.",
+    namesBlank: "Shooter names cannot be blank.",
+    selectMachineFirst: "Select a machine first.",
+    noUndo: "No shot to undo.",
+    onStation: "on Station",
+    shotOf: "Shot {n} of 25",
+    right: "Right",
+    straight: "Straight",
+    left: "Left",
+    machine: "Machine",
+    scoresheet: "Scoresheet",
+    score: "Score",
+    started: "Round Started",
+    ended: "Round Ended",
+    notRecorded: "Not recorded",
+    finalScore: "Final Score",
+    hits: "Hits",
+    misses: "Misses",
+    doubles: "Doubles",
+    analysis: "Analysis",
+    singleShotAnalysis: "Single Shot Analysis",
+    directions: "Directions",
+    machines: "Machines",
+    noMachineData: "No machine data yet.",
+    missed: "missed",
+    savePhotoTip: "Long press the image, then choose Save to Photos."
+  },
+  zh: {
+    appTitle: "奥运多向飞碟计分器",
+    setupTitle: "设置运动员",
+    numShooters: "运动员人数：",
+    createShooters: "生成运动员",
+    startRound: "开始本轮",
+    roundTracker: "本轮记录",
+    targetNote: "每位运动员在每个靶位最多可打 2 个右方、1 个正前方、2 个左方。",
+    hit: "中",
+    miss: "脱",
+    double: "双发",
+    back: "撤回",
+    endRound: "结束本轮",
+    finalScoresheet: "最终成绩表",
+    exportImage: "导出图片",
+    exportPDF: "导出 PDF",
+    resultsAnalysis: "成绩与分析",
+    reset: "重置",
+    language: "语言",
+    shooterName: "运动员 {n} 姓名：",
+    startingStation: "起始靶位：",
+    station: "靶位",
+    enterShooterName: "输入运动员姓名",
+    onlyShooter6: "只有第 6 位运动员可以和其他人共用起始靶位。",
+    namesBlank: "运动员姓名不能为空。",
+    selectMachineFirst: "请先选择抛靶机。",
+    noUndo: "没有可撤回的记录。",
+    onStation: "在靶位",
+    shotOf: "第 {n} 靶，共 25 靶",
+    right: "右方",
+    straight: "正前方",
+    left: "左方",
+    machine: "抛靶机",
+    scoresheet: "成绩表",
+    score: "成绩",
+    started: "开始时间",
+    ended: "结束时间",
+    notRecorded: "未记录",
+    finalScore: "最终成绩",
+    hits: "中靶",
+    misses: "脱靶",
+    doubles: "双发",
+    analysis: "分析",
+    singleShotAnalysis: "单发分析",
+    directions: "方向",
+    machines: "抛靶机",
+    noMachineData: "暂无抛靶机数据。",
+    missed: "脱靶",
+    savePhotoTip: "长按图片，然后选择存入照片。"
+  }
+};
 
 const stationMachines = {
   1: [
@@ -501,15 +671,69 @@ const directionLimits = {
 
 const directionOrder = ["Left", "Straight", "Right"];
 
-function formatDateTime(date) {
-  if (!date) return "Not recorded";
+function t(key, replacements = {}) {
+  let text = translations[currentLanguage][key] || translations.en[key] || key;
 
-  return date.toLocaleString([], {
+  Object.keys(replacements).forEach(k => {
+    text = text.replace(`{${k}}`, replacements[k]);
+  });
+
+  return text;
+}
+
+function directionText(direction) {
+  if (direction === "Left") return t("left");
+  if (direction === "Straight") return t("straight");
+  return t("right");
+}
+
+function toggleSettings(event) {
+  event.stopPropagation();
+  document.getElementById("settingsMenu").classList.toggle("hidden");
+}
+
+document.addEventListener("click", function(event) {
+  const settingsArea = document.getElementById("settingsArea");
+  const settingsMenu = document.getElementById("settingsMenu");
+
+  if (!settingsArea.contains(event.target)) {
+    settingsMenu.classList.add("hidden");
+  }
+});
+
+function changeLanguage(lang) {
+  currentLanguage = lang;
+  document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+  applyLanguage();
+  createShooterInputs();
+
+  if (!document.getElementById("scoreArea").classList.contains("hidden")) {
+    updateDisplay();
+  }
+
+  if (!document.getElementById("finalPage").classList.contains("hidden")) {
+    endRound(true);
+  }
+}
+
+function applyLanguage() {
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+
+  document.getElementById("languageLabel").textContent = t("language");
+}
+
+function formatDateTime(date) {
+  if (!date) return t("notRecorded");
+
+  return date.toLocaleString(currentLanguage === "zh" ? "zh-CN" : undefined, {
     year: "numeric",
-    month: "short",
+    month: currentLanguage === "zh" ? "numeric" : "short",
     day: "numeric",
     hour: "numeric",
-    minute: "2-digit"
+    minute: "2-digit",
+    hour12: true
   });
 }
 
@@ -562,17 +786,17 @@ function createShooterInputs() {
 
     for (let s = 1; s <= 5; s++) {
       const selected = s === defaultStation ? "selected" : "";
-      options += `<option value="${s}" ${selected}>Station ${s}</option>`;
+      options += `<option value="${s}" ${selected}>${t("station")} ${s}</option>`;
     }
 
     const savedName = savedNames[i] !== undefined ? savedNames[i] : "Shooter ";
 
     div.insertAdjacentHTML("beforeend", `
       <div class="shooter-row">
-        <label>Shooter ${i + 1} name:</label>
-        <input type="text" id="name${i}" value="${escapeHtml(savedName)}" placeholder="Enter shooter name" oninput="saveCurrentSetup()">
+        <label>${t("shooterName", { n: i + 1 })}</label>
+        <input type="text" id="name${i}" value="${escapeHtml(savedName)}" placeholder="${t("enterShooterName")}" oninput="saveCurrentSetup()">
 
-        <label>Starting station:</label>
+        <label>${t("startingStation")}</label>
         <select id="station${i}" onchange="saveCurrentSetup(); checkStations();">
           ${options}
         </select>
@@ -613,7 +837,7 @@ function checkStations() {
   }
 
   document.getElementById("stationWarning").textContent =
-    invalid ? "Only shooter 6 can share a starting station." : "";
+    invalid ? t("onlyShooter6") : "";
 }
 
 function startRound() {
@@ -632,8 +856,7 @@ function startRound() {
     const name = document.getElementById("name" + i).value.trim();
 
     if (name === "") {
-      document.getElementById("stationWarning").textContent =
-        "Shooter names cannot be blank.";
+      document.getElementById("stationWarning").textContent = t("namesBlank");
       return;
     }
 
@@ -645,8 +868,7 @@ function startRound() {
       const allowed = count === 6 && (first === 5 || second === 5);
 
       if (!allowed) {
-        document.getElementById("stationWarning").textContent =
-          "Only shooter 6 can share a starting station.";
+        document.getElementById("stationWarning").textContent = t("onlyShooter6");
         return;
       }
     } else {
@@ -700,10 +922,10 @@ function updateDisplay() {
   const shooter = shooters[currentShooterIndex];
 
   document.getElementById("currentShooterText").textContent =
-    shooter.name + " on Station " + shooter.station;
+    `${shooter.name} ${t("onStation")} ${shooter.station}`;
 
   document.getElementById("currentShotText").textContent =
-    "Shot " + (shooter.shots + 1) + " of 25";
+    t("shotOf", { n: shooter.shots + 1 });
 
   createMachineButtons(shooter);
   updateLogs();
@@ -723,10 +945,10 @@ function createMachineButtons(shooter) {
     const label = document.createElement("div");
     label.className = "direction-count";
     label.textContent =
-      m.direction + " " + counts[m.direction] + "/" + directionLimits[m.direction];
+      directionText(m.direction) + " " + counts[m.direction] + "/" + directionLimits[m.direction];
 
     const button = document.createElement("button");
-    button.textContent = "Machine " + m.number;
+    button.textContent = `${t("machine")} ${m.number}`;
 
     const locked = counts[m.direction] >= directionLimits[m.direction];
 
@@ -757,7 +979,7 @@ function recordShot(result) {
   const shooter = shooters[currentShooterIndex];
 
   if (selectedMachine === null) {
-    setMessage("Select a machine first.");
+    setMessage(t("selectMachineFirst"));
     return;
   }
 
@@ -791,7 +1013,7 @@ function recordShot(result) {
 
 function undoLastShot() {
   if (history.length === 0) {
-    setMessage("No shot to undo.");
+    setMessage(t("noUndo"));
     return;
   }
 
@@ -843,9 +1065,9 @@ function makeScoresheet(title, includeRoundInfo) {
       <tr>
         <td>
           <strong>${s.name}</strong>
-          <span class="station-subtitle">(Station ${s.startStation})</span>
+          <span class="station-subtitle">(${t("station")} ${s.startStation})</span>
         </td>
-        <td class="scoresheet-cell">${html || "No shots yet"}</td>
+        <td class="scoresheet-cell">${html || t("noMachineData")}</td>
         <td><strong>${s.hits + s.doubles}</strong></td>
       </tr>
     `;
@@ -853,8 +1075,8 @@ function makeScoresheet(title, includeRoundInfo) {
 
   const roundInfo = includeRoundInfo ? `
     <div class="round-info">
-      <div><strong>Round Started:</strong> ${formatDateTime(roundStartTime)}</div>
-      <div><strong>Round Ended:</strong> ${formatDateTime(roundEndTime)}</div>
+      <div><strong>${t("started")}:</strong> ${formatDateTime(roundStartTime)}</div>
+      <div><strong>${t("ended")}:</strong> ${formatDateTime(roundEndTime)}</div>
     </div>
   ` : "";
 
@@ -866,9 +1088,9 @@ function makeScoresheet(title, includeRoundInfo) {
         <table>
           <thead>
             <tr>
-              <th>Shooter</th>
-              <th>Scoresheet</th>
-              <th>Score</th>
+              <th>${currentLanguage === "zh" ? "运动员" : "Shooter"}</th>
+              <th>${t("scoresheet")}</th>
+              <th>${t("score")}</th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>
@@ -879,7 +1101,7 @@ function makeScoresheet(title, includeRoundInfo) {
 }
 
 function updateLogs() {
-  document.getElementById("allLogs").innerHTML = makeScoresheet("Scoresheet", false);
+  document.getElementById("allLogs").innerHTML = makeScoresheet(t("scoresheet"), false);
 }
 
 function makeFinalSymbolSummary(s) {
@@ -887,15 +1109,15 @@ function makeFinalSymbolSummary(s) {
     <div class="final-symbol-row">
       <div class="final-symbol-item">
         <span class="score-symbol hit-symbol">/</span>
-        Hits: ${s.hits}
+        ${t("hits")}: ${s.hits}
       </div>
       <div class="final-symbol-item">
         <span class="score-symbol miss-symbol">○</span>
-        Misses: ${s.misses}
+        ${t("misses")}: ${s.misses}
       </div>
       <div class="final-symbol-item">
         <span class="score-symbol double-symbol">•</span>
-        Doubles: ${s.doubles}
+        ${t("doubles")}: ${s.doubles}
       </div>
     </div>
   `;
@@ -916,13 +1138,12 @@ function buildAnalysisData(log, missRule) {
 
   const machineData = {};
 
+  for (let i = 1; i <= 15; i++) {
+    machineData[i] = { misses: 0, total: 0 };
+  }
+
   log.forEach(entry => {
     directionData[entry.direction].total++;
-
-    if (!machineData[entry.machine]) {
-      machineData[entry.machine] = { misses: 0, total: 0 };
-    }
-
     machineData[entry.machine].total++;
 
     if (missRule(entry)) {
@@ -942,48 +1163,51 @@ function makeDirectionRows(directionData) {
 
     return `
       <div class="analysis-row ${getRateClass(rate)}">
-        <span>${direction}</span>
-        <span>${data.misses}/${data.total} missed, ${percent}%</span>
+        <span>${directionText(direction)}</span>
+        <span>${data.misses}/${data.total} ${t("missed")}, ${percent}%</span>
       </div>
     `;
   }).join("");
 }
 
-function makeMachineChips(machineData) {
-  const machines = Object.keys(machineData)
-    .sort((a, b) => Number(a) - Number(b))
-    .filter(machine => machineData[machine].total > 0);
-
-  if (machines.length === 0) {
-    return `<div class="analysis-subtitle">No machine data yet.</div>`;
-  }
+function makeMachineChip(machine, data) {
+  const rate = data.total === 0 ? 0 : data.misses / data.total;
+  const percent = Math.round(rate * 100);
 
   return `
-    <div class="machine-chip-wrap">
-      ${machines.map(machine => {
-        const data = machineData[machine];
-        const rate = data.misses / data.total;
-        const percent = Math.round(rate * 100);
-
-        return `
-          <span class="machine-chip ${getRateClass(rate)}">
-            ${machine}: ${data.misses}/${data.total}, ${percent}%
-          </span>
-        `;
-      }).join("")}
-    </div>
+    <span class="machine-chip ${getRateClass(rate)}">
+      ${machine}: ${data.misses}/${data.total}, ${percent}%
+    </span>
   `;
+}
+
+function makeMachineRows(machineData) {
+  let html = "";
+
+  for (let station = 1; station <= 5; station++) {
+    const machines = stationMachines[station].map(m => m.number);
+
+    html += `<div class="machine-station-row">`;
+
+    machines.forEach(machine => {
+      html += makeMachineChip(machine, machineData[machine]);
+    });
+
+    html += `</div>`;
+  }
+
+  return html;
 }
 
 function makeAnalysisSection(title, data) {
   return `
     <p class="analysis-title">${title}</p>
-    <div class="analysis-subtitle">Directions</div>
+    <div class="analysis-subtitle">${t("directions")}</div>
     <div class="analysis-grid">
       ${makeDirectionRows(data.directionData)}
     </div>
-    <div class="analysis-subtitle">Machines</div>
-    ${makeMachineChips(data.machineData)}
+    <div class="analysis-subtitle machine-analysis-title">${t("machines")}</div>
+    ${makeMachineRows(data.machineData)}
   `;
 }
 
@@ -1000,17 +1224,17 @@ function makeShooterAnalysis(s) {
 
   return `
     <div class="analysis-box">
-      ${makeAnalysisSection("Analysis", regular)}
+      ${makeAnalysisSection(t("analysis"), regular)}
 
       <hr class="analysis-divider">
 
-      ${makeAnalysisSection("Single Shot Analysis", singleShot)}
+      ${makeAnalysisSection(t("singleShotAnalysis"), singleShot)}
     </div>
   `;
 }
 
-function endRound() {
-  if (!roundEndTime) {
+function endRound(keepExistingEndTime = false) {
+  if (!roundEndTime || !keepExistingEndTime) {
     roundEndTime = new Date();
   }
 
@@ -1025,8 +1249,8 @@ function endRound() {
     html += `
       <div class="final-card">
         <h3>${s.name}</h3>
-        <p><strong>Starting Station:</strong> ${s.startStation}</p>
-        <p><strong>Final Score:</strong> ${s.hits + s.doubles}</p>
+        <p><strong>${t("startingStation")} </strong>${s.startStation}</p>
+        <p><strong>${t("finalScore")}:</strong> ${s.hits + s.doubles}</p>
         ${makeFinalSymbolSummary(s)}
         ${makeShooterAnalysis(s)}
       </div>
@@ -1054,7 +1278,7 @@ async function exportScoresheetImage() {
         <body style="margin:0; background:white;">
           <img src="${dataUrl}" style="width:100%; height:auto;">
           <p style="font-family:Arial; padding:12px;">
-            Long press the image, then choose Save to Photos.
+            ${t("savePhotoTip")}
           </p>
         </body>
       </html>
@@ -1062,7 +1286,7 @@ async function exportScoresheetImage() {
     newWindow.document.close();
   } else {
     const link = document.createElement("a");
-    link.download = "trap-scoresheet.png";
+    link.download = "olympic-trap-scoresheet.png";
     link.href = dataUrl;
     link.click();
   }
@@ -1131,6 +1355,7 @@ function resetApp() {
   createShooterInputs();
 }
 
+applyLanguage();
 createShooterInputs();
 </script>
 </body>

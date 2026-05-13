@@ -768,7 +768,8 @@ const translations = {
     confirmLeaveTitle: "Confirm Leave",
     confirmLeaveMessage: "{name} will be skipped until they join again. Their missed turns will show as N/A.",
     confirmJoinTitle: "Confirm Join",
-    confirmJoinMessage: "{name} will rejoin at their current rotation position, not where they left.",
+    confirmJoinMessage: "{name} will rejoin on shot {shot} at Station {station}.",
+    confirmJoinFinishedMessage: "{name} already reached 25 shots and cannot rejoin this round.",
     confirmEndTitle: "End Round?",
     confirmEndMessage: "After ending the round, you can only change each recorded target between Hit, Miss, and Double.",
     confirmResetTitle: "Reset Round?",
@@ -832,7 +833,8 @@ const translations = {
     confirmLeaveTitle: "确认退场",
     confirmLeaveMessage: "{name} 会被跳过，直到重新归队。错过的轮次会显示为 N/A。",
     confirmJoinTitle: "确认归队",
-    confirmJoinMessage: "{name} 会从当前轮转到的位置继续，而不是从离场的位置继续。",
+    confirmJoinMessage: "{name} 将从第 {shot} 靶、靶位 {station} 继续。",
+    confirmJoinFinishedMessage: "{name} 已经达到 25 靶，本轮不能再归队。",
     confirmEndTitle: "确认结束本轮？",
     confirmEndMessage: "结束后只能把已记录的靶改为中、脱或双发，不能修改抛靶机或方向。",
     confirmResetTitle: "确认重置？",
@@ -1174,8 +1176,15 @@ function availableShootersExist() {
   return shooters.some(s => !s.away && s.shots < 25);
 }
 
+function unfinishedShootersExist() {
+  return shooters.some(s => s.shots < 25);
+}
+
 function addSkippedShot(shooter) {
+  if (shooter.shots >= 25) return;
+
   shooter.shots++;
+
   shooter.log.push({
     result: "NA",
     machine: null,
@@ -1187,34 +1196,40 @@ function addSkippedShot(shooter) {
   if (shooter.station > 5) shooter.station = 1;
 }
 
+function advanceIndex() {
+  currentShooterIndex++;
+  if (currentShooterIndex >= shooters.length) currentShooterIndex = 0;
+}
+
 function moveToNextAvailableShooter() {
-  if (!availableShootersExist()) {
+  if (!unfinishedShootersExist()) {
     requestEndRound();
     return;
   }
 
   let guard = 0;
+  const maxGuard = shooters.length * 30;
 
-  while (guard < shooters.length * 3) {
+  while (guard < maxGuard) {
     const shooter = shooters[currentShooterIndex];
 
     if (shooter.shots >= 25) {
-      currentShooterIndex++;
-      if (currentShooterIndex >= shooters.length) currentShooterIndex = 0;
+      advanceIndex();
       guard++;
       continue;
     }
 
     if (shooter.away) {
       addSkippedShot(shooter);
-      currentShooterIndex++;
-      if (currentShooterIndex >= shooters.length) currentShooterIndex = 0;
+      advanceIndex();
       guard++;
       continue;
     }
 
-    break;
+    return;
   }
+
+  requestEndRound();
 }
 
 function updateDisplay() {
@@ -1223,14 +1238,23 @@ function updateDisplay() {
   setMessage("");
 
   if (!availableShootersExist()) {
-    requestEndRound();
+    moveToNextAvailableShooter();
     updateLogs();
-    return;
+
+    if (!availableShootersExist()) {
+      requestEndRound();
+      return;
+    }
   }
 
   moveToNextAvailableShooter();
 
   const shooter = shooters[currentShooterIndex];
+
+  if (!shooter || shooter.shots >= 25 || shooter.away) {
+    updateLogs();
+    return;
+  }
 
   document.getElementById("currentShooterText").textContent =
     `${shooter.name} ${t("onStation")} ${shooter.station}`;
@@ -1298,6 +1322,8 @@ function clearMachineSelectionVisuals() {
 function recordShot(result) {
   const shooter = shooters[currentShooterIndex];
 
+  if (!shooter || shooter.shots >= 25) return;
+
   if (selectedMachine === null) {
     setMessage(t("selectMachineFirst"));
     return;
@@ -1328,8 +1354,7 @@ function recordShot(result) {
   shooter.station++;
   if (shooter.station > 5) shooter.station = 1;
 
-  currentShooterIndex++;
-  if (currentShooterIndex >= shooters.length) currentShooterIndex = 0;
+  advanceIndex();
 
   updateDisplay();
 }
@@ -1352,10 +1377,22 @@ function undoLastShot() {
 function requestLeaveOrJoinShooter(index) {
   const shooter = originalOrder[index];
 
+  if (shooter.shots >= 25 && shooter.away) {
+    openInfoModal(
+      t("confirmJoinTitle"),
+      t("confirmJoinFinishedMessage", { name: shooter.name })
+    );
+    return;
+  }
+
   if (shooter.away) {
     openConfirmModal(
       t("confirmJoinTitle"),
-      t("confirmJoinMessage", { name: shooter.name }),
+      t("confirmJoinMessage", {
+        name: shooter.name,
+        shot: shooter.shots + 1,
+        station: shooter.station
+      }),
       function() {
         history.push({
           shooters: JSON.stringify(shooters),
@@ -1406,6 +1443,21 @@ function requestResetRound() {
       resetApp();
     }
   );
+}
+
+function openInfoModal(title, message) {
+  document.getElementById("editPreview").classList.add("hidden");
+  document.getElementById("editPreview").innerHTML = "";
+
+  document.getElementById("modalTitle").textContent = title;
+  document.getElementById("modalMessage").textContent = message;
+
+  document.getElementById("modalButtons").className = "modal-actions";
+  document.getElementById("modalButtons").innerHTML = `
+    <button class="cancel-button" onclick="closeModal()">${t("confirm")}</button>
+  `;
+
+  document.getElementById("modalBackdrop").classList.remove("hidden");
 }
 
 function openConfirmModal(title, message, onConfirm) {
@@ -1633,7 +1685,7 @@ function updateLogs() {
         </div>
 
         <div class="live-action-cell">
-          <button class="live-action-button ${s.away ? "join-button" : "leave-button"}" onclick="requestLeaveOrJoinShooter(${shooterIndex})">
+          <button class="live-action-button ${s.away ? "join-button" : "leave-button"}" onclick="requestLeaveOrJoinShooter(${shooterIndex})" ${s.shots >= 25 ? "disabled" : ""}>
             ${s.away ? t("joinShooter") : t("leaveShooter")}
           </button>
         </div>

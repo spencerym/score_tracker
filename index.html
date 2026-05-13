@@ -768,10 +768,9 @@ const translations = {
     confirmLeaveTitle: "Confirm Leave",
     confirmLeaveMessage: "{name} will be skipped until they join again. Their missed turns will show as N/A.",
     confirmJoinTitle: "Confirm Join",
-    confirmJoinMessage: "{name} will rejoin on shot {shot} at Station {station}.",
-    confirmJoinFinishedMessage: "{name} already reached 25 shots and cannot rejoin this round.",
-    confirmEndTitle: "End Round?",
-    confirmEndMessage: "After ending the round, you can only change each recorded target between Hit, Miss, and Double.",
+    confirmJoinMessage: "{name} will rejoin on shot {shot} at station {station}.",
+    confirmEndTitle: "End Round Early?",
+    confirmEndMessage: "The round is not complete. After ending, you can only change each recorded target between Hit, Miss, and Double.",
     confirmResetTitle: "Reset Round?",
     confirmResetMessage: "All scores and target records from this round will be lost.",
     confirm: "Confirm",
@@ -834,9 +833,8 @@ const translations = {
     confirmLeaveMessage: "{name} 会被跳过，直到重新归队。错过的轮次会显示为 N/A。",
     confirmJoinTitle: "确认归队",
     confirmJoinMessage: "{name} 将从第 {shot} 靶、靶位 {station} 继续。",
-    confirmJoinFinishedMessage: "{name} 已经达到 25 靶，本轮不能再归队。",
-    confirmEndTitle: "确认结束本轮？",
-    confirmEndMessage: "结束后只能把已记录的靶改为中、脱或双发，不能修改抛靶机或方向。",
+    confirmEndTitle: "确认提前结束？",
+    confirmEndMessage: "本轮还没有完成。结束后只能把已记录的靶改为中、脱或双发，不能修改抛靶机或方向。",
     confirmResetTitle: "确认重置？",
     confirmResetMessage: "本轮所有成绩和记录都会丢失。",
     confirm: "确认",
@@ -1172,19 +1170,16 @@ function startRound() {
   updateDisplay();
 }
 
+function roundFullyComplete() {
+  return shooters.length > 0 && shooters.every(s => s.shots >= 25);
+}
+
 function availableShootersExist() {
   return shooters.some(s => !s.away && s.shots < 25);
 }
 
-function unfinishedShootersExist() {
-  return shooters.some(s => s.shots < 25);
-}
-
 function addSkippedShot(shooter) {
-  if (shooter.shots >= 25) return;
-
   shooter.shots++;
-
   shooter.log.push({
     result: "NA",
     machine: null,
@@ -1196,40 +1191,39 @@ function addSkippedShot(shooter) {
   if (shooter.station > 5) shooter.station = 1;
 }
 
-function advanceIndex() {
-  currentShooterIndex++;
-  if (currentShooterIndex >= shooters.length) currentShooterIndex = 0;
-}
-
 function moveToNextAvailableShooter() {
-  if (!unfinishedShootersExist()) {
+  if (roundFullyComplete()) {
+    endRound();
+    return;
+  }
+
+  if (!availableShootersExist()) {
     requestEndRound();
     return;
   }
 
   let guard = 0;
-  const maxGuard = shooters.length * 30;
 
-  while (guard < maxGuard) {
+  while (guard < shooters.length * 3) {
     const shooter = shooters[currentShooterIndex];
 
     if (shooter.shots >= 25) {
-      advanceIndex();
+      currentShooterIndex++;
+      if (currentShooterIndex >= shooters.length) currentShooterIndex = 0;
       guard++;
       continue;
     }
 
     if (shooter.away) {
       addSkippedShot(shooter);
-      advanceIndex();
+      currentShooterIndex++;
+      if (currentShooterIndex >= shooters.length) currentShooterIndex = 0;
       guard++;
       continue;
     }
 
-    return;
+    break;
   }
-
-  requestEndRound();
 }
 
 function updateDisplay() {
@@ -1237,24 +1231,24 @@ function updateDisplay() {
   selectedDirection = null;
   setMessage("");
 
-  if (!availableShootersExist()) {
-    moveToNextAvailableShooter();
-    updateLogs();
+  if (roundFullyComplete()) {
+    endRound();
+    return;
+  }
 
-    if (!availableShootersExist()) {
-      requestEndRound();
-      return;
-    }
+  if (!availableShootersExist()) {
+    requestEndRound();
+    updateLogs();
+    return;
   }
 
   moveToNextAvailableShooter();
 
-  const shooter = shooters[currentShooterIndex];
-
-  if (!shooter || shooter.shots >= 25 || shooter.away) {
-    updateLogs();
+  if (document.getElementById("scoreArea").classList.contains("hidden")) {
     return;
   }
+
+  const shooter = shooters[currentShooterIndex];
 
   document.getElementById("currentShooterText").textContent =
     `${shooter.name} ${t("onStation")} ${shooter.station}`;
@@ -1322,8 +1316,6 @@ function clearMachineSelectionVisuals() {
 function recordShot(result) {
   const shooter = shooters[currentShooterIndex];
 
-  if (!shooter || shooter.shots >= 25) return;
-
   if (selectedMachine === null) {
     setMessage(t("selectMachineFirst"));
     return;
@@ -1354,7 +1346,8 @@ function recordShot(result) {
   shooter.station++;
   if (shooter.station > 5) shooter.station = 1;
 
-  advanceIndex();
+  currentShooterIndex++;
+  if (currentShooterIndex >= shooters.length) currentShooterIndex = 0;
 
   updateDisplay();
 }
@@ -1377,20 +1370,12 @@ function undoLastShot() {
 function requestLeaveOrJoinShooter(index) {
   const shooter = originalOrder[index];
 
-  if (shooter.shots >= 25 && shooter.away) {
-    openInfoModal(
-      t("confirmJoinTitle"),
-      t("confirmJoinFinishedMessage", { name: shooter.name })
-    );
-    return;
-  }
-
   if (shooter.away) {
     openConfirmModal(
       t("confirmJoinTitle"),
       t("confirmJoinMessage", {
         name: shooter.name,
-        shot: shooter.shots + 1,
+        shot: Math.min(shooter.shots + 1, 25),
         station: shooter.station
       }),
       function() {
@@ -1424,6 +1409,11 @@ function requestLeaveOrJoinShooter(index) {
 }
 
 function requestEndRound() {
+  if (roundFullyComplete()) {
+    endRound();
+    return;
+  }
+
   openConfirmModal(
     t("confirmEndTitle"),
     t("confirmEndMessage"),
@@ -1443,21 +1433,6 @@ function requestResetRound() {
       resetApp();
     }
   );
-}
-
-function openInfoModal(title, message) {
-  document.getElementById("editPreview").classList.add("hidden");
-  document.getElementById("editPreview").innerHTML = "";
-
-  document.getElementById("modalTitle").textContent = title;
-  document.getElementById("modalMessage").textContent = message;
-
-  document.getElementById("modalButtons").className = "modal-actions";
-  document.getElementById("modalButtons").innerHTML = `
-    <button class="cancel-button" onclick="closeModal()">${t("confirm")}</button>
-  `;
-
-  document.getElementById("modalBackdrop").classList.remove("hidden");
 }
 
 function openConfirmModal(title, message, onConfirm) {
@@ -1685,7 +1660,7 @@ function updateLogs() {
         </div>
 
         <div class="live-action-cell">
-          <button class="live-action-button ${s.away ? "join-button" : "leave-button"}" onclick="requestLeaveOrJoinShooter(${shooterIndex})" ${s.shots >= 25 ? "disabled" : ""}>
+          <button class="live-action-button ${s.away ? "join-button" : "leave-button"}" onclick="requestLeaveOrJoinShooter(${shooterIndex})">
             ${s.away ? t("joinShooter") : t("leaveShooter")}
           </button>
         </div>
@@ -1864,6 +1839,8 @@ function endRound(keepExistingEndTime = false) {
   if (!roundEndTime || !keepExistingEndTime) {
     roundEndTime = new Date();
   }
+
+  closeModal();
 
   document.getElementById("scoreArea").classList.add("hidden");
   document.getElementById("finalPage").classList.remove("hidden");

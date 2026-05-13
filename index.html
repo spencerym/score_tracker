@@ -347,7 +347,6 @@
       grid-template-columns: 1fr 78px;
       gap: 8px;
       align-items: stretch;
-      margin-bottom: 0;
     }
 
     .live-header-spacer {
@@ -359,7 +358,6 @@
       grid-template-columns: 1fr 78px;
       gap: 8px;
       align-items: center;
-      margin-top: 0;
     }
 
     .live-row-table table {
@@ -886,15 +884,13 @@ function defaultNamePrefix() {
   return currentLanguage === "zh" ? "运动员 " : "Shooter ";
 }
 
-function convertNamePrefix(name, targetLanguage) {
-  if (name.startsWith("Shooter")) {
-    const rest = name.slice("Shooter".length);
-    return targetLanguage === "zh" ? "运动员" + rest : name;
+function convertNameForLanguageSwitch(name, targetLanguage) {
+  if (targetLanguage === "zh" && name.startsWith("Shooter ")) {
+    return "运动员 " + name.slice("Shooter ".length);
   }
 
-  if (name.startsWith("运动员")) {
-    const rest = name.slice("运动员".length);
-    return targetLanguage === "en" ? "Shooter" + rest : name;
+  if (targetLanguage === "en" && name.startsWith("运动员 ")) {
+    return "Shooter " + name.slice("运动员 ".length);
   }
 
   return name;
@@ -949,19 +945,21 @@ document.addEventListener("click", function(event) {
 });
 
 function changeLanguage(lang) {
-  saveCurrentSetup();
-
   const setupVisible = !document.getElementById("setup").classList.contains("hidden");
 
   if (setupVisible) {
-    savedNames = savedNames.map(name => convertNamePrefix(name, lang));
+    saveCurrentSetup();
+
+    savedNames = savedNames.map(name => {
+      return convertNameForLanguageSwitch(name, lang);
+    });
   }
 
   currentLanguage = lang;
   document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
 
   applyLanguage();
-  createShooterInputs();
+  createShooterInputs(false);
 
   if (!document.getElementById("scoreArea").classList.contains("hidden")) {
     updateDisplay();
@@ -1019,8 +1017,10 @@ function setMessage(text) {
   document.getElementById("actionMessage").textContent = text || "";
 }
 
-function createShooterInputs() {
-  saveCurrentSetup();
+function createShooterInputs(shouldSave = true) {
+  if (shouldSave) {
+    saveCurrentSetup();
+  }
 
   let count = Number(document.getElementById("shooterCount").value);
 
@@ -1890,11 +1890,11 @@ function resetApp() {
   document.getElementById("scoreArea").classList.add("hidden");
   document.getElementById("setup").classList.remove("hidden");
 
-  createShooterInputs();
+  createShooterInputs(false);
 }
 
 applyLanguage();
-createShooterInputs();
+createShooterInputs(false);
 </script>
 </body>
 </html>

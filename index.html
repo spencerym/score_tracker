@@ -5,10 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <style>
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
     html, body {
       width: 100%;
@@ -23,6 +22,8 @@
       margin: 0;
       padding: 10px;
     }
+
+    .hidden { display: none !important; }
 
     .container {
       width: 100%;
@@ -62,11 +63,6 @@
       box-shadow: 0 4px 14px rgba(0,0,0,0.15);
     }
 
-    .settings-menu label {
-      font-size: 13px;
-      font-weight: bold;
-    }
-
     h1, h2, h3 { text-align: center; }
 
     h1 {
@@ -89,6 +85,14 @@
       color: white;
       border: none;
       font-weight: bold;
+      outline: none;
+      user-select: none;
+    }
+
+    button:focus,
+    button:active {
+      outline: none;
+      box-shadow: none;
     }
 
     button:disabled {
@@ -151,11 +155,12 @@
 
     .machine-column button.selected {
       background: #062d91;
-      outline: 4px solid rgba(6, 45, 145, 0.25);
-      transform: scale(1.03);
+      box-shadow: inset 0 0 0 3px rgba(255,255,255,0.75);
     }
 
-    .machine-column button.locked { background: #999; }
+    .machine-column button.locked {
+      background: #999;
+    }
 
     .result-buttons {
       display: grid;
@@ -174,8 +179,6 @@
     .miss { background: #a83232; }
     .double { background: #7a42c8; }
 
-    .control-buttons { margin-top: 10px; }
-
     .back-button { background: #b35b00; }
 
     .end-button {
@@ -186,12 +189,11 @@
     .export-buttons {
       margin: 18px 0 28px;
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr;
       gap: 8px;
     }
 
     .export-image { background: #26834a; }
-    .export-pdf { background: #7a42c8; }
 
     .reset-button {
       background: #3568d4;
@@ -244,8 +246,6 @@
       color: white;
     }
 
-    .hidden { display: none; }
-
     .log-section {
       margin-top: 8px;
       padding: 10px;
@@ -282,6 +282,26 @@
       justify-content: center;
       width: 22px;
       min-height: 25px;
+      border-radius: 6px;
+    }
+
+    .editable-shot {
+      cursor: pointer;
+      background: #f8fafc;
+    }
+
+    .highlight-shot {
+      background: #fff2b8 !important;
+      outline: 2px solid #f59e0b;
+      border-radius: 6px;
+    }
+
+    .na-cell {
+      font-size: 10px;
+      color: #777;
+      font-weight: bold;
+      background: #e5e7eb;
+      border-radius: 6px;
     }
 
     .machine-number {
@@ -302,6 +322,77 @@
       margin-top: 3px;
       color: #555;
     }
+
+    .away-label {
+      display: block;
+      font-size: 11px;
+      color: #a83232;
+      margin-top: 3px;
+    }
+
+    .live-board-area {
+      margin-top: 8px;
+      padding: 10px;
+      background: #fafafa;
+      border-radius: 14px;
+      overflow-x: auto;
+    }
+
+    .live-board-inner {
+      min-width: 420px;
+    }
+
+    .live-header {
+      display: grid;
+      grid-template-columns: 1fr 78px;
+      gap: 8px;
+      align-items: stretch;
+      margin-bottom: 0;
+    }
+
+    .live-header-spacer {
+      height: 34px;
+    }
+
+    .live-row-wrap {
+      display: grid;
+      grid-template-columns: 1fr 78px;
+      gap: 8px;
+      align-items: center;
+      margin-top: 0;
+    }
+
+    .live-row-table table {
+      table-layout: fixed;
+    }
+
+    .live-row-table td:first-child,
+    .live-row-table th:first-child {
+      width: 88px;
+    }
+
+    .live-row-table td:last-child,
+    .live-row-table th:last-child {
+      width: 50px;
+    }
+
+    .live-action-cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      min-height: 42px;
+    }
+
+    .live-action-button {
+      padding: 7px 4px;
+      margin: 0;
+      font-size: 12px;
+      min-height: 35px;
+    }
+
+    .leave-button { background: #c2410c; }
+    .join-button { background: #2563eb; }
 
     .final-card {
       background: #f1f4ff;
@@ -405,6 +496,71 @@
       margin-top: 12px;
     }
 
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .modal-box {
+      width: 100%;
+      max-width: 390px;
+      background: white;
+      border-radius: 18px;
+      padding: 16px;
+      text-align: center;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.25);
+    }
+
+    .modal-box h3 {
+      margin-top: 4px;
+    }
+
+    .modal-box p {
+      font-size: 14px;
+      color: #444;
+      line-height: 1.4;
+    }
+
+    .modal-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .modal-actions-edit {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .modal-actions-edit button {
+      font-size: 13px;
+      padding: 10px 4px;
+    }
+
+    .modal-cancel-full {
+      margin-top: 8px;
+    }
+
+    .confirm-button { background: #c2410c; }
+    .cancel-button { background: #475569; }
+
+    .edit-preview {
+      margin: 10px 0;
+      padding: 8px;
+      background: #f8fafc;
+      border-radius: 12px;
+      overflow-x: auto;
+    }
+
     @media (max-width: 480px) {
       body { padding: 6px; }
 
@@ -439,6 +595,15 @@
       }
 
       .scoresheet-cell { min-width: 165px; }
+
+      .live-board-inner {
+        min-width: 400px;
+      }
+
+      .live-row-wrap,
+      .live-header {
+        grid-template-columns: 1fr 70px;
+      }
     }
   </style>
 </head>
@@ -462,8 +627,17 @@
     <h2 data-i18n="setupTitle">Set Up Shooters</h2>
 
     <label data-i18n="numShooters">Number of shooters:</label>
-    <input type="number" id="shooterCount" min="1" max="6" value="3" onchange="createShooterInputs()">
-    <button onclick="createShooterInputs()" data-i18n="createShooters">Create Shooters</button>
+    <input
+      type="number"
+      inputmode="numeric"
+      pattern="[0-9]*"
+      id="shooterCount"
+      min="1"
+      max="6"
+      value="3"
+      onfocus="clearShooterCountField()"
+      oninput="createShooterInputs()"
+    >
 
     <p class="message" id="stationWarning"></p>
 
@@ -493,14 +667,12 @@
 
       <p class="message" id="actionMessage"></p>
 
-      <div class="control-buttons">
-        <button class="back-button" onclick="undoLastShot()" data-i18n="back">Back</button>
-      </div>
+      <button class="back-button" onclick="undoLastShot()" data-i18n="back">Back</button>
     </div>
 
     <div id="allLogs"></div>
 
-    <button class="end-button" onclick="endRound()" data-i18n="endRound">End Round</button>
+    <button class="end-button" onclick="requestEndRound()" data-i18n="endRound">End Round</button>
   </div>
 
   <div id="finalPage" class="hidden">
@@ -509,13 +681,21 @@
 
     <div class="export-buttons">
       <button class="export-image" onclick="exportScoresheetImage()" data-i18n="exportImage">Export Image</button>
-      <button class="export-pdf" onclick="exportScoresheetPDF()" data-i18n="exportPDF">Export PDF</button>
     </div>
 
     <h2 data-i18n="resultsAnalysis">Results and Analysis</h2>
     <div id="finalResults"></div>
 
-    <button class="reset-button" onclick="resetApp()" data-i18n="reset">Reset</button>
+    <button class="reset-button" onclick="requestResetRound()" data-i18n="reset">Reset</button>
+  </div>
+</div>
+
+<div id="modalBackdrop" class="modal-backdrop hidden">
+  <div class="modal-box">
+    <h3 id="modalTitle"></h3>
+    <p id="modalMessage"></p>
+    <div id="editPreview" class="edit-preview hidden"></div>
+    <div id="modalButtons"></div>
   </div>
 </div>
 
@@ -531,13 +711,15 @@ let savedStations = [];
 let roundStartTime = null;
 let roundEndTime = null;
 let currentLanguage = "en";
+let editingShooterIndex = null;
+let editingShotIndex = null;
+let shooterCountClearedThisFocus = false;
 
 const translations = {
   en: {
     appTitle: "Olympic Trap Score Tracker",
     setupTitle: "Set Up Shooters",
     numShooters: "Number of shooters:",
-    createShooters: "Create Shooters",
     startRound: "Start Round",
     roundTracker: "Round Tracker",
     targetNote: "Each shooter can receive 2 right, 1 straight, and 2 left targets from each station.",
@@ -548,7 +730,6 @@ const translations = {
     endRound: "End Round",
     finalScoresheet: "Final Scoresheet",
     exportImage: "Export Image",
-    exportPDF: "Export PDF",
     resultsAnalysis: "Results and Analysis",
     reset: "Reset",
     language: "Language",
@@ -581,13 +762,28 @@ const translations = {
     machines: "Machines",
     noMachineData: "No machine data yet.",
     missed: "missed",
-    savePhotoTip: "Long press the image, then choose Save to Photos."
+    savePhotoTip: "Long press the image, then choose Save to Photos.",
+    leaveShooter: "Leave",
+    joinShooter: "Join",
+    away: "Left Early",
+    skipped: "N/A",
+    confirmLeaveTitle: "Confirm Leave",
+    confirmLeaveMessage: "{name} will be skipped until they join again. Their missed turns will show as N/A.",
+    confirmJoinTitle: "Confirm Join",
+    confirmJoinMessage: "{name} will rejoin at their current rotation position, not where they left.",
+    confirmEndTitle: "End Round?",
+    confirmEndMessage: "After ending the round, you can only change each recorded target between Hit, Miss, and Double.",
+    confirmResetTitle: "Reset Round?",
+    confirmResetMessage: "All scores and target records from this round will be lost.",
+    confirm: "Confirm",
+    cancel: "Cancel",
+    editResultTitle: "Change Result",
+    editResultMessage: "{name}, shot {shot}. Choose the corrected result for this target."
   },
   zh: {
     appTitle: "奥运多向飞碟计分器",
     setupTitle: "设置运动员",
     numShooters: "运动员人数：",
-    createShooters: "生成运动员",
     startRound: "开始本轮",
     roundTracker: "本轮记录",
     targetNote: "每位运动员在每个靶位最多可打 2 个右方、1 个正前方、2 个左方。",
@@ -598,7 +794,6 @@ const translations = {
     endRound: "结束本轮",
     finalScoresheet: "最终成绩表",
     exportImage: "导出图片",
-    exportPDF: "导出 PDF",
     resultsAnalysis: "成绩与分析",
     reset: "重置",
     language: "语言",
@@ -631,7 +826,23 @@ const translations = {
     machines: "抛靶机",
     noMachineData: "暂无抛靶机数据。",
     missed: "脱靶",
-    savePhotoTip: "长按图片，然后选择存入照片。"
+    savePhotoTip: "长按图片，然后选择存入照片。",
+    leaveShooter: "退场",
+    joinShooter: "归队",
+    away: "离场",
+    skipped: "N/A",
+    confirmLeaveTitle: "确认退场",
+    confirmLeaveMessage: "{name} 会被跳过，直到重新归队。错过的轮次会显示为 N/A。",
+    confirmJoinTitle: "确认归队",
+    confirmJoinMessage: "{name} 会从当前轮转到的位置继续，而不是从离场的位置继续。",
+    confirmEndTitle: "确认结束本轮？",
+    confirmEndMessage: "结束后只能把已记录的靶改为中、脱或双发，不能修改抛靶机或方向。",
+    confirmResetTitle: "确认重置？",
+    confirmResetMessage: "本轮所有成绩和记录都会丢失。",
+    confirm: "确认",
+    cancel: "取消",
+    editResultTitle: "修改结果",
+    editResultMessage: "{name}，第 {shot} 靶。请选择这一靶的正确结果。"
   }
 };
 
@@ -671,6 +882,24 @@ const directionLimits = {
 
 const directionOrder = ["Left", "Straight", "Right"];
 
+function defaultNamePrefix() {
+  return currentLanguage === "zh" ? "运动员 " : "Shooter ";
+}
+
+function convertNamePrefix(name, targetLanguage) {
+  if (name.startsWith("Shooter")) {
+    const rest = name.slice("Shooter".length);
+    return targetLanguage === "zh" ? "运动员" + rest : name;
+  }
+
+  if (name.startsWith("运动员")) {
+    const rest = name.slice("运动员".length);
+    return targetLanguage === "en" ? "Shooter" + rest : name;
+  }
+
+  return name;
+}
+
 function t(key, replacements = {}) {
   let text = translations[currentLanguage][key] || translations.en[key] || key;
 
@@ -685,6 +914,24 @@ function directionText(direction) {
   if (direction === "Left") return t("left");
   if (direction === "Straight") return t("straight");
   return t("right");
+}
+
+function clearShooterCountField() {
+  const input = document.getElementById("shooterCount");
+
+  if (!shooterCountClearedThisFocus) {
+    input.value = "";
+    shooterCountClearedThisFocus = true;
+  }
+
+  input.onblur = function() {
+    shooterCountClearedThisFocus = false;
+
+    if (input.value === "") {
+      input.value = "1";
+      createShooterInputs();
+    }
+  };
 }
 
 function toggleSettings(event) {
@@ -702,8 +949,17 @@ document.addEventListener("click", function(event) {
 });
 
 function changeLanguage(lang) {
+  saveCurrentSetup();
+
+  const setupVisible = !document.getElementById("setup").classList.contains("hidden");
+
+  if (setupVisible) {
+    savedNames = savedNames.map(name => convertNamePrefix(name, lang));
+  }
+
   currentLanguage = lang;
   document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+
   applyLanguage();
   createShooterInputs();
 
@@ -740,6 +996,8 @@ function formatDateTime(date) {
 function saveCurrentSetup() {
   const count = Number(document.getElementById("shooterCount").value);
 
+  if (!count || count < 1) return;
+
   for (let i = 0; i < count; i++) {
     const nameInput = document.getElementById("name" + i);
     const stationInput = document.getElementById("station" + i);
@@ -766,6 +1024,8 @@ function createShooterInputs() {
 
   let count = Number(document.getElementById("shooterCount").value);
 
+  if (!count) return;
+
   if (count < 1) count = 1;
   if (count > 6) count = 6;
 
@@ -789,7 +1049,7 @@ function createShooterInputs() {
       options += `<option value="${s}" ${selected}>${t("station")} ${s}</option>`;
     }
 
-    const savedName = savedNames[i] !== undefined ? savedNames[i] : "Shooter ";
+    const savedName = savedNames[i] !== undefined ? savedNames[i] : defaultNamePrefix();
 
     div.insertAdjacentHTML("beforeend", `
       <div class="shooter-row">
@@ -822,8 +1082,13 @@ function checkStations() {
   const stationOwner = {};
   let invalid = false;
 
+  if (!count) return;
+
   for (let i = 0; i < count; i++) {
-    const station = document.getElementById("station" + i).value;
+    const stationElement = document.getElementById("station" + i);
+    if (!stationElement) continue;
+
+    const station = stationElement.value;
 
     if (stationOwner[station] !== undefined) {
       const first = stationOwner[station];
@@ -884,6 +1149,7 @@ function startRound() {
       hits: 0,
       misses: 0,
       doubles: 0,
+      away: false,
       targetCounts: makeCounts(),
       log: []
     });
@@ -904,20 +1170,65 @@ function startRound() {
   updateDisplay();
 }
 
+function availableShootersExist() {
+  return shooters.some(s => !s.away && s.shots < 25);
+}
+
+function addSkippedShot(shooter) {
+  shooter.shots++;
+  shooter.log.push({
+    result: "NA",
+    machine: null,
+    direction: null,
+    skipped: true
+  });
+
+  shooter.station++;
+  if (shooter.station > 5) shooter.station = 1;
+}
+
+function moveToNextAvailableShooter() {
+  if (!availableShootersExist()) {
+    requestEndRound();
+    return;
+  }
+
+  let guard = 0;
+
+  while (guard < shooters.length * 3) {
+    const shooter = shooters[currentShooterIndex];
+
+    if (shooter.shots >= 25) {
+      currentShooterIndex++;
+      if (currentShooterIndex >= shooters.length) currentShooterIndex = 0;
+      guard++;
+      continue;
+    }
+
+    if (shooter.away) {
+      addSkippedShot(shooter);
+      currentShooterIndex++;
+      if (currentShooterIndex >= shooters.length) currentShooterIndex = 0;
+      guard++;
+      continue;
+    }
+
+    break;
+  }
+}
+
 function updateDisplay() {
   selectedMachine = null;
   selectedDirection = null;
   setMessage("");
 
-  if (shooters.every(s => s.shots >= 25)) {
-    endRound();
+  if (!availableShootersExist()) {
+    requestEndRound();
+    updateLogs();
     return;
   }
 
-  while (shooters[currentShooterIndex].shots >= 25) {
-    currentShooterIndex++;
-    if (currentShooterIndex >= shooters.length) currentShooterIndex = 0;
-  }
+  moveToNextAvailableShooter();
 
   const shooter = shooters[currentShooterIndex];
 
@@ -964,14 +1275,23 @@ function createMachineButtons(shooter) {
 
       document.querySelectorAll(".machine-column button").forEach(b => {
         b.classList.remove("selected");
+        b.blur();
       });
 
       button.classList.add("selected");
+      button.blur();
     };
 
     column.appendChild(label);
     column.appendChild(button);
     div.appendChild(column);
+  });
+}
+
+function clearMachineSelectionVisuals() {
+  document.querySelectorAll(".machine-column button").forEach(b => {
+    b.classList.remove("selected");
+    b.blur();
   });
 }
 
@@ -999,8 +1319,11 @@ function recordShot(result) {
   shooter.log.push({
     machine: selectedMachine,
     direction: selectedDirection,
-    result: result
+    result: result,
+    skipped: false
   });
+
+  clearMachineSelectionVisuals();
 
   shooter.station++;
   if (shooter.station > 5) shooter.station = 1;
@@ -1026,48 +1349,227 @@ function undoLastShot() {
   updateDisplay();
 }
 
+function requestLeaveOrJoinShooter(index) {
+  const shooter = originalOrder[index];
+
+  if (shooter.away) {
+    openConfirmModal(
+      t("confirmJoinTitle"),
+      t("confirmJoinMessage", { name: shooter.name }),
+      function() {
+        history.push({
+          shooters: JSON.stringify(shooters),
+          currentShooterIndex: currentShooterIndex
+        });
+
+        shooter.away = false;
+        closeModal();
+        updateDisplay();
+      }
+    );
+    return;
+  }
+
+  openConfirmModal(
+    t("confirmLeaveTitle"),
+    t("confirmLeaveMessage", { name: shooter.name }),
+    function() {
+      history.push({
+        shooters: JSON.stringify(shooters),
+        currentShooterIndex: currentShooterIndex
+      });
+
+      shooter.away = true;
+      closeModal();
+      updateDisplay();
+    }
+  );
+}
+
+function requestEndRound() {
+  openConfirmModal(
+    t("confirmEndTitle"),
+    t("confirmEndMessage"),
+    function() {
+      closeModal();
+      endRound();
+    }
+  );
+}
+
+function requestResetRound() {
+  openConfirmModal(
+    t("confirmResetTitle"),
+    t("confirmResetMessage"),
+    function() {
+      closeModal();
+      resetApp();
+    }
+  );
+}
+
+function openConfirmModal(title, message, onConfirm) {
+  document.getElementById("editPreview").classList.add("hidden");
+  document.getElementById("editPreview").innerHTML = "";
+
+  document.getElementById("modalTitle").textContent = title;
+  document.getElementById("modalMessage").textContent = message;
+
+  document.getElementById("modalButtons").className = "modal-actions";
+  document.getElementById("modalButtons").innerHTML = `
+    <button class="cancel-button" onclick="closeModal()">${t("cancel")}</button>
+    <button class="confirm-button" id="modalConfirmButton">${t("confirm")}</button>
+  `;
+
+  document.getElementById("modalConfirmButton").onclick = onConfirm;
+  document.getElementById("modalBackdrop").classList.remove("hidden");
+}
+
+function openEditResultModal(shooterIndex, shotIndex) {
+  editingShooterIndex = shooterIndex;
+  editingShotIndex = shotIndex;
+
+  const shooter = originalOrder[shooterIndex];
+
+  document.getElementById("modalTitle").textContent = t("editResultTitle");
+  document.getElementById("modalMessage").textContent =
+    t("editResultMessage", { name: shooter.name, shot: shotIndex + 1 });
+
+  document.getElementById("editPreview").classList.remove("hidden");
+  document.getElementById("editPreview").innerHTML = makeSingleShooterPreview(shooter, shooterIndex, shotIndex);
+
+  document.getElementById("modalButtons").className = "";
+  document.getElementById("modalButtons").innerHTML = `
+    <div class="modal-actions-edit">
+      <button class="hit" onclick="changeShotResult('Hit')">/ ${t("hit")}</button>
+      <button class="miss" onclick="changeShotResult('Miss')">○ ${t("miss")}</button>
+      <button class="double" onclick="changeShotResult('Double')">• ${t("double")}</button>
+    </div>
+    <button class="cancel-button modal-cancel-full" onclick="closeModal()">${t("cancel")}</button>
+  `;
+
+  document.getElementById("modalBackdrop").classList.remove("hidden");
+}
+
+function closeModal() {
+  document.getElementById("modalBackdrop").classList.add("hidden");
+}
+
+function changeShotResult(newResult) {
+  const shooter = originalOrder[editingShooterIndex];
+
+  if (!shooter || !shooter.log[editingShotIndex] || shooter.log[editingShotIndex].skipped) return;
+
+  shooter.log[editingShotIndex].result = newResult;
+  recalculateShooterStats(shooter);
+  closeModal();
+  endRound(true);
+}
+
+function recalculateShooterStats(shooter) {
+  shooter.hits = 0;
+  shooter.misses = 0;
+  shooter.doubles = 0;
+
+  shooter.log.forEach(entry => {
+    if (entry.result === "Hit") shooter.hits++;
+    if (entry.result === "Miss") shooter.misses++;
+    if (entry.result === "Double") shooter.doubles++;
+  });
+}
+
 function getSymbol(result) {
   if (result === "Hit") return `<span class="score-symbol hit-symbol">/</span>`;
   if (result === "Miss") return `<span class="score-symbol miss-symbol">○</span>`;
-  return `<span class="score-symbol double-symbol">•</span>`;
+  if (result === "Double") return `<span class="score-symbol double-symbol">•</span>`;
+  return `<span class="na-cell">N/A</span>`;
 }
 
-function makeShotCell(entry) {
+function makeShotCell(entry, shooterIndex, shotIndex, editable, highlight = false) {
   if (!entry) return `<span class="empty-scorecell"></span>`;
 
+  if (entry.skipped) {
+    return `
+      <span class="scorecell na-cell ${highlight ? "highlight-shot" : ""}">
+        N/A
+      </span>
+    `;
+  }
+
+  const click = editable ? `onclick="openEditResultModal(${shooterIndex}, ${shotIndex})"` : "";
+
   return `
-    <span class="scorecell">
+    <span class="scorecell ${editable ? "editable-shot" : ""} ${highlight ? "highlight-shot" : ""}" ${click}>
       ${getSymbol(entry.result)}
       <span class="machine-number">${entry.machine}</span>
     </span>
   `;
 }
 
-function makeScoresheet(title, includeRoundInfo) {
+function makeShotGroupsForShooter(s, shooterIndex, editable, highlightIndex = null) {
+  let html = "";
+  const groupsToShow = Math.ceil(s.log.length / 5);
+
+  for (let group = 0; group < groupsToShow; group++) {
+    html += `<div class="shot-group">`;
+
+    for (let slot = 0; slot < 5; slot++) {
+      const index = group * 5 + slot;
+      html += makeShotCell(
+        index < s.log.length ? s.log[index] : null,
+        shooterIndex,
+        index,
+        editable,
+        highlightIndex === index
+      );
+    }
+
+    html += `</div>`;
+  }
+
+  return html || t("noMachineData");
+}
+
+function makeSingleShooterPreview(shooter, shooterIndex, highlightIndex) {
+  const html = makeShotGroupsForShooter(shooter, shooterIndex, false, highlightIndex);
+
+  return `
+    <table>
+      <thead>
+        <tr>
+          <th>${currentLanguage === "zh" ? "运动员" : "Shooter"}</th>
+          <th>${t("scoresheet")}</th>
+          <th>${t("score")}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <strong>${shooter.name}</strong>
+            <span class="station-subtitle">(${t("station")} ${shooter.startStation})</span>
+          </td>
+          <td>${html}</td>
+          <td><strong>${shooter.hits + shooter.doubles}</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  `;
+}
+
+function makeScoresheet(title, includeRoundInfo, editable = false) {
   let rows = "";
 
-  originalOrder.forEach(s => {
-    let html = "";
-    const groupsToShow = Math.ceil(s.log.length / 5);
-
-    for (let group = 0; group < groupsToShow; group++) {
-      html += `<div class="shot-group">`;
-
-      for (let slot = 0; slot < 5; slot++) {
-        const index = group * 5 + slot;
-        html += makeShotCell(index < s.log.length ? s.log[index] : null);
-      }
-
-      html += `</div>`;
-    }
+  originalOrder.forEach((s, shooterIndex) => {
+    const html = makeShotGroupsForShooter(s, shooterIndex, editable);
 
     rows += `
       <tr>
         <td>
           <strong>${s.name}</strong>
           <span class="station-subtitle">(${t("station")} ${s.startStation})</span>
+          ${s.away ? `<span class="away-label">${t("away")}</span>` : ""}
         </td>
-        <td class="scoresheet-cell">${html || t("noMachineData")}</td>
+        <td class="scoresheet-cell">${html}</td>
         <td><strong>${s.hits + s.doubles}</strong></td>
       </tr>
     `;
@@ -1100,8 +1602,69 @@ function makeScoresheet(title, includeRoundInfo) {
   `;
 }
 
+function makeLiveSingleRow(s, shooterIndex) {
+  return `
+    <table>
+      <tbody>
+        <tr>
+          <td>
+            <strong>${s.name}</strong>
+            <span class="station-subtitle">(${t("station")} ${s.startStation})</span>
+            ${s.away ? `<span class="away-label">${t("away")}</span>` : ""}
+          </td>
+          <td class="scoresheet-cell">
+            ${makeShotGroupsForShooter(s, shooterIndex, false)}
+          </td>
+          <td><strong>${s.hits + s.doubles}</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  `;
+}
+
 function updateLogs() {
-  document.getElementById("allLogs").innerHTML = makeScoresheet(t("scoresheet"), false);
+  let rowsHtml = "";
+
+  originalOrder.forEach((s, shooterIndex) => {
+    rowsHtml += `
+      <div class="live-row-wrap">
+        <div class="live-row-table">
+          ${makeLiveSingleRow(s, shooterIndex)}
+        </div>
+
+        <div class="live-action-cell">
+          <button class="live-action-button ${s.away ? "join-button" : "leave-button"}" onclick="requestLeaveOrJoinShooter(${shooterIndex})">
+            ${s.away ? t("joinShooter") : t("leaveShooter")}
+          </button>
+        </div>
+      </div>
+    `;
+  });
+
+  document.getElementById("allLogs").innerHTML = `
+    <div class="live-board-area">
+      <h2>${t("scoresheet")}</h2>
+
+      <div class="live-board-inner">
+        <div class="live-header">
+          <div class="live-row-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>${currentLanguage === "zh" ? "运动员" : "Shooter"}</th>
+                  <th>${t("scoresheet")}</th>
+                  <th>${t("score")}</th>
+                </tr>
+              </thead>
+            </table>
+          </div>
+          <div class="live-header-spacer"></div>
+        </div>
+
+        ${rowsHtml}
+      </div>
+    </div>
+  `;
 }
 
 function makeFinalSymbolSummary(s) {
@@ -1143,6 +1706,8 @@ function buildAnalysisData(log, missRule) {
   }
 
   log.forEach(entry => {
+    if (entry.skipped) return;
+
     directionData[entry.direction].total++;
     machineData[entry.machine].total++;
 
@@ -1212,6 +1777,8 @@ function makeAnalysisSection(title, data) {
 }
 
 function makeShooterAnalysis(s) {
+  const hasDoubles = s.doubles > 0;
+
   const regular = buildAnalysisData(
     s.log,
     entry => entry.result === "Miss"
@@ -1221,6 +1788,14 @@ function makeShooterAnalysis(s) {
     s.log,
     entry => entry.result === "Miss" || entry.result === "Double"
   );
+
+  if (!hasDoubles) {
+    return `
+      <div class="analysis-box">
+        ${makeAnalysisSection(t("singleShotAnalysis"), singleShot)}
+      </div>
+    `;
+  }
 
   return `
     <div class="analysis-box">
@@ -1241,16 +1816,18 @@ function endRound(keepExistingEndTime = false) {
   document.getElementById("scoreArea").classList.add("hidden");
   document.getElementById("finalPage").classList.remove("hidden");
 
-  document.getElementById("finalLogs").innerHTML = makeScoresheet("", true);
+  document.getElementById("finalLogs").innerHTML = makeScoresheet("", true, true);
 
   let html = "";
 
   originalOrder.forEach(s => {
+    const percentage = Math.round(((s.hits + s.doubles) / 25) * 100);
+
     html += `
       <div class="final-card">
         <h3>${s.name}</h3>
         <p><strong>${t("startingStation")} </strong>${s.startStation}</p>
-        <p><strong>${t("finalScore")}:</strong> ${s.hits + s.doubles}</p>
+        <p><strong>${t("finalScore")}:</strong> ${s.hits + s.doubles}/25 (${percentage}%)</p>
         ${makeFinalSymbolSummary(s)}
         ${makeShooterAnalysis(s)}
       </div>
@@ -1292,53 +1869,8 @@ async function exportScoresheetImage() {
   }
 }
 
-async function exportScoresheetPDF() {
-  const element = document.getElementById("finalLogs");
-
-  const canvas = await html2canvas(element, {
-    backgroundColor: "#ffffff",
-    scale: 3
-  });
-
-  const imgData = canvas.toDataURL("image/png");
-
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF({
-    orientation: "portrait",
-    unit: "mm",
-    format: "a4"
-  });
-
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-
-  const imgWidth = pageWidth - 20;
-  const imgHeight = canvas.height * imgWidth / canvas.width;
-
-  if (imgHeight <= pageHeight - 20) {
-    pdf.addImage(imgData, "PNG", 10, 10, imgWidth, imgHeight);
-  } else {
-    let heightLeft = imgHeight;
-    let position = 10;
-
-    pdf.addImage(imgData, "PNG", 10, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight - 20;
-
-    while (heightLeft > 0) {
-      position -= pageHeight - 20;
-      pdf.addPage();
-      pdf.addImage(imgData, "PNG", 10, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight - 20;
-    }
-  }
-
-  const blobUrl = pdf.output("bloburl");
-  window.open(blobUrl, "_blank");
-}
-
 function resetApp() {
-  saveCurrentSetup();
-
+  savedNames = [];
   shooters = [];
   originalOrder = [];
   currentShooterIndex = 0;
@@ -1347,6 +1879,12 @@ function resetApp() {
   history = [];
   roundStartTime = null;
   roundEndTime = null;
+
+  const count = Number(document.getElementById("shooterCount").value) || 1;
+
+  for (let i = 0; i < count; i++) {
+    savedNames[i] = defaultNamePrefix();
+  }
 
   document.getElementById("finalPage").classList.add("hidden");
   document.getElementById("scoreArea").classList.add("hidden");

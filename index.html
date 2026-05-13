@@ -96,9 +96,10 @@
     }
 
     button:disabled {
-      background: #999;
+      background: #999 !important;
       color: #eee;
-      opacity: 0.7;
+      opacity: 0.75;
+      cursor: not-allowed;
     }
 
     .shooter-row {
@@ -115,6 +116,11 @@
       margin-top: 12px;
       margin-bottom: 6px;
       text-align: center;
+    }
+
+    .paused-box {
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
     }
 
     .target-note {
@@ -647,7 +653,7 @@
   <div id="scoreArea" class="hidden">
     <h2 data-i18n="roundTracker">Round Tracker</h2>
 
-    <div class="current-box">
+    <div class="current-box" id="currentBox">
       <h3 id="currentShooterText"></h3>
       <p id="currentShotText"></p>
 
@@ -658,14 +664,14 @@
       <div id="machineButtons" class="machine-area"></div>
 
       <div class="result-buttons">
-        <button class="hit" onclick="recordShot('Hit')">/ <span data-i18n="hit">Hit</span></button>
-        <button class="miss" onclick="recordShot('Miss')">○ <span data-i18n="miss">Miss</span></button>
-        <button class="double" onclick="recordShot('Double')">• <span data-i18n="double">Double</span></button>
+        <button class="hit" id="hitButton" onclick="recordShot('Hit')">/ <span data-i18n="hit">Hit</span></button>
+        <button class="miss" id="missButton" onclick="recordShot('Miss')">○ <span data-i18n="miss">Miss</span></button>
+        <button class="double" id="doubleButton" onclick="recordShot('Double')">• <span data-i18n="double">Double</span></button>
       </div>
 
       <p class="message" id="actionMessage"></p>
 
-      <button class="back-button" onclick="undoLastShot()" data-i18n="back">Back</button>
+      <button class="back-button" id="backButton" onclick="undoLastShot()" data-i18n="back">Back</button>
     </div>
 
     <div id="allLogs"></div>
@@ -712,6 +718,7 @@ let currentLanguage = "en";
 let editingShooterIndex = null;
 let editingShotIndex = null;
 let shooterCountClearedThisFocus = false;
+let endPromptCancelledWhilePaused = false;
 
 const translations = {
   en: {
@@ -765,6 +772,8 @@ const translations = {
     joinShooter: "Join",
     away: "Left Early",
     skipped: "N/A",
+    waitingTitle: "Waiting for a shooter to rejoin",
+    waitingMessage: "All shooters have left. No new scores can be added until at least one shooter rejoins.",
     confirmLeaveTitle: "Confirm Leave",
     confirmLeaveMessage: "{name} will be skipped until they join again. Their missed turns will show as N/A.",
     confirmJoinTitle: "Confirm Join",
@@ -829,6 +838,8 @@ const translations = {
     joinShooter: "归队",
     away: "离场",
     skipped: "N/A",
+    waitingTitle: "等待运动员归队",
+    waitingMessage: "所有运动员都已离场。至少一位运动员归队后，才能继续添加新成绩。",
     confirmLeaveTitle: "确认退场",
     confirmLeaveMessage: "{name} 会被跳过，直到重新归队。错过的轮次会显示为 N/A。",
     confirmJoinTitle: "确认归队",
@@ -1116,6 +1127,7 @@ function startRound() {
   currentShooterIndex = 0;
   roundStartTime = new Date();
   roundEndTime = null;
+  endPromptCancelledWhilePaused = false;
 
   for (let i = 0; i < count; i++) {
     const name = document.getElementById("name" + i).value.trim();
@@ -1191,14 +1203,54 @@ function addSkippedShot(shooter) {
   if (shooter.station > 5) shooter.station = 1;
 }
 
+function setShootingControlsDisabled(disabled) {
+  document.getElementById("hitButton").disabled = disabled;
+  document.getElementById("missButton").disabled = disabled;
+  document.getElementById("doubleButton").disabled = disabled;
+  document.getElementById("backButton").disabled = disabled;
+
+  document.querySelectorAll(".machine-column button").forEach(button => {
+    button.disabled = disabled || button.classList.contains("locked");
+  });
+}
+
+function showPausedState() {
+  selectedMachine = null;
+  selectedDirection = null;
+  clearMachineSelectionVisuals();
+
+  document.getElementById("currentBox").classList.add("paused-box");
+  document.getElementById("currentShooterText").textContent = t("waitingTitle");
+  document.getElementById("currentShotText").textContent = t("waitingMessage");
+
+  const div = document.getElementById("machineButtons");
+  div.innerHTML = "";
+
+  for (let i = 0; i < 3; i++) {
+    const column = document.createElement("div");
+    column.className = "machine-column";
+
+    const label = document.createElement("div");
+    label.className = "direction-count";
+    label.textContent = i === 0 ? t("right") : i === 1 ? t("straight") : t("left");
+
+    const button = document.createElement("button");
+    button.textContent = t("machine");
+    button.disabled = true;
+
+    column.appendChild(label);
+    column.appendChild(button);
+    div.appendChild(column);
+  }
+
+  setShootingControlsDisabled(true);
+  setMessage(t("waitingMessage"));
+  updateLogs();
+}
+
 function moveToNextAvailableShooter() {
   if (roundFullyComplete()) {
     endRound();
-    return;
-  }
-
-  if (!availableShootersExist()) {
-    requestEndRound();
     return;
   }
 
@@ -1237,14 +1289,26 @@ function updateDisplay() {
   }
 
   if (!availableShootersExist()) {
-    requestEndRound();
-    updateLogs();
+    showPausedState();
+
+    if (!endPromptCancelledWhilePaused) {
+      requestEndRound(true);
+    }
+
     return;
   }
+
+  endPromptCancelledWhilePaused = false;
+  document.getElementById("currentBox").classList.remove("paused-box");
 
   moveToNextAvailableShooter();
 
   if (document.getElementById("scoreArea").classList.contains("hidden")) {
+    return;
+  }
+
+  if (!availableShootersExist()) {
+    showPausedState();
     return;
   }
 
@@ -1257,6 +1321,7 @@ function updateDisplay() {
     t("shotOf", { n: shooter.shots + 1 });
 
   createMachineButtons(shooter);
+  setShootingControlsDisabled(false);
   updateLogs();
 }
 
@@ -1314,7 +1379,17 @@ function clearMachineSelectionVisuals() {
 }
 
 function recordShot(result) {
+  if (!availableShootersExist()) {
+    showPausedState();
+    return;
+  }
+
   const shooter = shooters[currentShooterIndex];
+
+  if (!shooter || shooter.away || shooter.shots >= 25) {
+    showPausedState();
+    return;
+  }
 
   if (selectedMachine === null) {
     setMessage(t("selectMachineFirst"));
@@ -1385,6 +1460,7 @@ function requestLeaveOrJoinShooter(index) {
         });
 
         shooter.away = false;
+        endPromptCancelledWhilePaused = false;
         closeModal();
         updateDisplay();
       }
@@ -1408,7 +1484,7 @@ function requestLeaveOrJoinShooter(index) {
   );
 }
 
-function requestEndRound() {
+function requestEndRound(autoPrompt = false) {
   if (roundFullyComplete()) {
     endRound();
     return;
@@ -1420,6 +1496,14 @@ function requestEndRound() {
     function() {
       closeModal();
       endRound();
+    },
+    function() {
+      closeModal();
+
+      if (autoPrompt && !availableShootersExist()) {
+        endPromptCancelledWhilePaused = true;
+        showPausedState();
+      }
     }
   );
 }
@@ -1435,7 +1519,7 @@ function requestResetRound() {
   );
 }
 
-function openConfirmModal(title, message, onConfirm) {
+function openConfirmModal(title, message, onConfirm, onCancel = null) {
   document.getElementById("editPreview").classList.add("hidden");
   document.getElementById("editPreview").innerHTML = "";
 
@@ -1444,11 +1528,12 @@ function openConfirmModal(title, message, onConfirm) {
 
   document.getElementById("modalButtons").className = "modal-actions";
   document.getElementById("modalButtons").innerHTML = `
-    <button class="cancel-button" onclick="closeModal()">${t("cancel")}</button>
+    <button class="cancel-button" id="modalCancelButton">${t("cancel")}</button>
     <button class="confirm-button" id="modalConfirmButton">${t("confirm")}</button>
   `;
 
   document.getElementById("modalConfirmButton").onclick = onConfirm;
+  document.getElementById("modalCancelButton").onclick = onCancel || closeModal;
   document.getElementById("modalBackdrop").classList.remove("hidden");
 }
 
@@ -1908,6 +1993,7 @@ function resetApp() {
   history = [];
   roundStartTime = null;
   roundEndTime = null;
+  endPromptCancelledWhilePaused = false;
 
   const count = Number(document.getElementById("shooterCount").value) || 1;
 
